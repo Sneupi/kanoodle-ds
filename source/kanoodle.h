@@ -133,13 +133,14 @@ void print_solution(const Polyomino solution[12]) {
         }
         printf("\n");
     }
-    printf("\x1b[0m");
+    printf("\x1b[37m");
 }
+
+static Polyomino moves[MAX_MOVES]; // statically define to not consume very limited stack space
 
 int random_solution(Polyomino solution[12])
 {
     // get random subset moves
-    Polyomino moves[MAX_MOVES];
     sample_move_space(moves, MAX_MOVES);
 
     // init dlx (board size + piece count)

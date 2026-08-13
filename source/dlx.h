@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #define MAX_COLS 67
-#define MAX_ROWS 1789
+#define MAX_ROWS 900
 #define NODES_PER_ROW 6
 #define MAX_NODES (1 + MAX_COLS + (MAX_ROWS * NODES_PER_ROW)) // Root + Headers + Data
 
