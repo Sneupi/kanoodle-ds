@@ -1,16 +1,14 @@
 test_file=kanoodle_test
-
 cat > "$test_file.c" <<'EOF'
-#include <stdio.h>
-#include <stdlib.h>
 #include "kanoodle.h"
-void main() { print_solution( random_solution() ); }
+#include <stdio.h>
+void main() 
+{ 
+    Polyomino sol[12];
+    random_solution(sol);
+    print_solution(sol);
+}
 EOF
-
-gcc -g polyomino.c kanoodle.c dlx.c "$test_file.c" -o "$test_file"
-
-rm "$test_file.c"
-
+gcc -g polyomino.c kanoodle.h "$test_file.c" -o "$test_file"
 time -p valgrind --leak-check=full --track-origins=yes "./$test_file"
-
-rm "$test_file"
+rm $test_file*

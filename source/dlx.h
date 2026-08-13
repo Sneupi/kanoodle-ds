@@ -1,192 +1,139 @@
-/**
- * @author jw013
- * @date 2012
- * @brief Implementation of Donald Knuth's
- * <a href="http://en.wikipedia.org/wiki/Dancing_Links">"Dancing Links"</a>
- * algorithm.
- */
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 
-#ifndef DLX_H
-#define DLX_H
+#define MAX_COLS 67
+#define MAX_ROWS 1789
+#define NODES_PER_ROW 6
+#define MAX_NODES (1 + MAX_COLS + (MAX_ROWS * NODES_PER_ROW)) // Root + Headers + Data
 
-#include <stddef.h>
+typedef struct {
+    uint16_t left, right, up, down;
+    uint16_t col; // Points to column header node index
+    uint16_t row; // Row identifier (0 for header nodes)
+} DLXNode;
 
-/* ===============
- * Data Structures
- */
+typedef struct {
+    DLXNode nodes[MAX_NODES];
+    uint16_t col_size[MAX_COLS + 1]; // Node counts per column
+    uint16_t node_count;
+    uint16_t solution[MAX_ROWS];
+    uint16_t solution_size;
+} DLXSolver;
 
-struct dlx_hnode;
+static DLXSolver solver; // Reserve memory statically
 
-/*
- * DLX node.
- * OPAQUE structure: do NOT access members.
- *
- * Each node can simultaneously be a member of two linked lists, one oriented
- * vertical (up-down) and the other oriented horizontally (left-right).  Nodes
- * also contain a pointer to the list header to allow access to the header in
- * O(1) time.
- */
-struct dlx_node {
-	void *row_id;
-	struct dlx_node *left;
-	struct dlx_node *right;
-	struct dlx_node *up;
-	struct dlx_node *down;
-	struct dlx_hnode *header;
-};
+void dlx_init(DLXSolver *s, uint16_t num_cols) {
+    s->node_count = num_cols + 1; // 0 is root, 1..num_cols are column headers
+    s->solution_size = 0;
 
-/*
- * List header node.
- * OPAQUE structure: do NOT access members.
- *
- * Special dlx_node that also tracks the number of nodes in its list
- */
-struct dlx_hnode {
-	struct dlx_node base;	/**< inherit fields from struct dlx_node */
-	size_t node_count;	/**< number of nodes in the list */
-	const void *id;		/**< pointer to unique list id */
-};
+    // Initialize root and column headers
+    for (uint16_t i = 0; i <= num_cols; i++) {
+        s->nodes[i].left = (i == 0) ? num_cols : i - 1;
+        s->nodes[i].right = (i == num_cols) ? 0 : i + 1;
+        s->nodes[i].up = i;
+        s->nodes[i].down = i;
+        s->nodes[i].col = i;
+        s->nodes[i].row = 0;
+        s->col_size[i] = 0;
+    }
+}
 
-/**
- * Convenient handle for holding pointers to the various data structures
- * necessary to store a DLX matrix.  While a simple root node pointer suffices
- * to solve exact cover on one, a few more pointers are needed for allocating
- * and tracking memory.  The row_off member behaves just like the typical
- * row_ptr in a compressed sparse row representation of a sparse matrix.
- *
- * All members are public.
- */
-struct dlx_matrix {
-	struct dlx_hnode root;
-	struct dlx_hnode *headers;
-	struct dlx_node *nodes;
-	size_t *row_off;	/* nodes[row_off[i]] ... nodes[row_off[i+1]]
-				   are row i's nodes */
-	size_t n_col;
-	size_t n_row;		/* number of rows = length of row_off - 1 */
-};
+void dlx_add_row(DLXSolver *s, uint16_t row_id, const uint16_t *cols, uint16_t col_cnt) {
+    uint16_t first_node = s->node_count;
 
-/**
- * Solution row.
- * Additional information about a selected solution row (you can think of the
- * s in srow as either solution or selected).
- *
- * If a row is included in the solution, it may be useful to know
- * (*) which column the row was selected to cover, a.k.a. its primary column
- *  	(though the row may also incidentally cover other columns, it was the
- *  	"best" choice for covering its primary column);
- * (*) the number of other possible row choices for that column.
- */
-struct dlx_srow {
-	struct dlx_node *row_node;	/**< row included in the solution */
-	const void *cid;  		/**< id of "primary" column */
-	size_t n_choices;		/**< number of possible choices of row */
-};
+    for (uint16_t i = 0; i < col_cnt; i++) {
+        uint16_t c = cols[i];
+        uint16_t new_node = s->node_count++;
 
+        s->nodes[new_node].row = row_id;
+        s->nodes[new_node].col = c;
 
-/* ===
- * functions for INITIALIZING matrices by initializing node links
- */
+        // Insert into column doubly linked list (at bottom)
+        s->nodes[new_node].down = c;
+        s->nodes[new_node].up = s->nodes[c].up;
+        s->nodes[s->nodes[c].up].down = new_node;
+        s->nodes[c].up = new_node;
+        s->col_size[c]++;
 
-/**
- * Set up the header nodes for a DLX matrix by connecting the array of n
- * pre-allocated column headers and the root node into a circularly linked
- * list (oriented left-right, as a row).
- *
- * The id members of the nodes are left un-touched.
- *
- * @param root		pointer to root node
- * @param headers	pre-allocated array of n header nodes
- * @param n		number of column headers, not including root node
- */
-void
-dlx_make_header_row(struct dlx_hnode *root, struct dlx_hnode *headers, size_t n);
+        // Insert into row doubly linked list
+        if (i == 0) {
+            s->nodes[new_node].left = new_node;
+            s->nodes[new_node].right = new_node;
+        } else {
+            s->nodes[new_node].left = s->nodes[first_node].left;
+            s->nodes[new_node].right = first_node;
+            s->nodes[s->nodes[first_node].left].right = new_node;
+            s->nodes[first_node].left = new_node;
+        }
+    }
+}
 
-/**
- * Set up the nodes for a DLX matrix by connecting the array of n pre-allocated
- * nodes into a circularly linked list (oriented left-right, as a row).
- *
- * @param nodes		pre-allocated array of n nodes
- * @param n		number of nodes in the row nodes[]
- */
-void dlx_make_row(struct dlx_node *nodes, void *row_id, size_t n);
+static inline void cover(DLXSolver *s, uint16_t c) {
+    // Unlink column header from horizontal list
+    s->nodes[s->nodes[c].right].left = s->nodes[c].left;
+    s->nodes[s->nodes[c].left].right = s->nodes[c].right;
 
-/**
- * Add pre-initialized row to the DLX matrix by appending each row node in the
- * array to the corresponding column.
- *
- * @param nodes		row nodes to append
- * @param headers	parallel array to nodes of pointers to headers of
- * 			columns to which the row nodes will be appended.  Must
- * 			have the same number of elements as nodes and the
- * 			headers must occur in the same order.
- * @param n		number of nodes in row
- */
-void dlx_add_row(struct dlx_node *nodes, struct dlx_hnode **columns, size_t n);
+    // Unlink all rows in this column
+    for (uint16_t i = s->nodes[c].down; i != c; i = s->nodes[i].down) {
+        for (uint16_t j = s->nodes[i].right; j != i; j = s->nodes[j].right) {
+            s->nodes[s->nodes[j].down].up = s->nodes[j].up;
+            s->nodes[s->nodes[j].up].down = s->nodes[j].down;
+            s->col_size[s->nodes[j].col]--;
+        }
+    }
+}
 
-/* ===
- * functions for SPECIFYING exact cover problems by pre-selecting rows
- */
+static inline void uncover(DLXSolver *s, uint16_t c) {
+    // Relink all rows in this column (in reverse)
+    for (uint16_t i = s->nodes[c].up; i != c; i = s->nodes[i].up) {
+        for (uint16_t j = s->nodes[i].left; j != i; j = s->nodes[j].left) {
+            s->col_size[s->nodes[j].col]++;
+            s->nodes[s->nodes[j].down].up = j;
+            s->nodes[s->nodes[j].up].down = j;
+        }
+    }
 
-/**
- * Cover all columns that row r covers.
- *
- * This can be useful if you want to force a certain row to be included in the
- * solution (hence the name).
- *
- * @return 	0 on success, -1 if r has already been removed from the matrix and
- * 		cannot be selected.
- */
-int dlx_force_row(struct dlx_node *r);
+    // Relink column header
+    s->nodes[s->nodes[c].right].left = c;
+    s->nodes[s->nodes[c].left].right = c;
+}
 
-/**
- * Inverse operation of dlx_force_row.
- *
- * Must be called in exact reverse order as calls to dlx_force_row for matrix
- * links to be restored properly.
- *
- * @return 0 on success, -1 if r is still in the matrix.
- */
-int dlx_unselect_row(struct dlx_node *r);
+bool dlx_search(DLXSolver *s) {
+    // If root.right == 0, matrix is empty; exact cover found
+    if (s->nodes[0].right == 0) {
+        return true;
+    }
 
-/* ===
- * functions for SOLVING exact cover
- */
+    // Choose column deterministically with Minimum Remaining Values heuristic
+    uint16_t c = s->nodes[0].right;
+    uint16_t min_size = s->col_size[c];
 
-/**
- * Exact cover DLX algorithm by D. Knuth, with some modification to allow for
- * skipping over a specified number of solutions.  It is unknown whether the
- * algorithm will count duplicate solutions (same set of rows).
- *
- * @param solution
- * 		Make sure to allocate enough space to contain the largest
- * 		possible cover solution to prevent buffer overflow.
- * @param root	pointer to root node of a valid DLX matrix structure.  The
- * 		matrix is modified by the function, but is restored to its
- * 		original state before the function returns.
- * @param k	must be 0; value is used internally.
- * @param pnsol	pointer to a value specifying the positive number of solutions
- * 		to look for.  The pointed to value will be decremented by the
- * 		number of solutions found, to a minimum of 0, and must be
- * 		positive initally.  The behavior of the function when *pnsol is
- * 		zero is undefined and most likely undesirable.
- * @return 	size of *pnsol'th solution, or 0 if not that many solutions
- * 		exist.  Note that the 0 case is ambiguous for an empty matrix,
- * 		which has a solution of size 0, but handling that situation is
- * 		left to the caller.
- */
-size_t
-dlx_exact_cover(struct dlx_srow *solution, struct dlx_hnode *root,
-		size_t k, size_t *pnsol);
+    for (uint16_t i = s->nodes[c].right; i != 0; i = s->nodes[i].right) {
+        if (s->col_size[i] < min_size) {
+            min_size = s->col_size[i];
+            c = i;
+        }
+    }
 
-/* ===
- * misc
- */
+    cover(s, c);
 
-/**
- * @param node
- * @return Pointer to row id of the row, or NULL of node is null.
- */
-void *dlx_row_id(struct dlx_node *node);
+    for (uint16_t r = s->nodes[c].down; r != c; r = s->nodes[r].down) {
+        s->solution[s->solution_size++] = s->nodes[r].row;
 
-#endif
+        for (uint16_t j = s->nodes[r].right; j != r; j = s->nodes[j].right) {
+            cover(s, s->nodes[j].col);
+        }
+
+        if (dlx_search(s)) return true; // Solution found
+
+        // Backtrack
+        s->solution_size--;
+        for (uint16_t j = s->nodes[r].left; j != r; j = s->nodes[j].left) {
+            uncover(s, s->nodes[j].col);
+        }
+    }
+
+    uncover(s, c);
+    return false;
+}
