@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MAX_POLY_CELLS 5 // Extendible if needed 
+
 typedef struct
 {
     // (Useful metadata)
@@ -11,17 +13,12 @@ typedef struct
     // Num cells
     uint8_t size;
 
-    /*
-     * Cell coordinates (x,y)
-     *
-     * NOTE: Array size is extendible
-     *       without breaking lib
-     */
+    // Cell coordinates (x,y)
     struct
     {
         int16_t x;
         int16_t y;
-    } cell[5];
+    } cell[MAX_POLY_CELLS];
 
 } Polyomino;
 
@@ -56,15 +53,8 @@ int is_equal(Polyomino p1, Polyomino p2);
 // Returns 1 if polyomino contains (x,y) coord, else 0
 int contains(Polyomino p, int x, int y);
 
-/**
- * Loads a list of all zero-bounded orientations
- * of a polyomino into the provided array pointer.
- *
- * Returns: size of arr (success), -1 (arr prev init), -2 (bad alloc).
- *
- * NOTE: Array is allocated with calloc() and must be free()'d.
- */
-int get_orientations(Polyomino poly, Polyomino **arr);
+// Loads a list of all (<= 8) zero-bounded orientations of a given polyomino shape
+int get_orientations(Polyomino poly, Polyomino arr[8]);
 
 // prints out polyomino as a string with specified cartesian bounds
 void print_poly_bounded(Polyomino p, int x0, int y0, int x1, int y1);

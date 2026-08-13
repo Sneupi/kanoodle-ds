@@ -133,54 +133,39 @@ int contains(Polyomino p, int x, int y)
     return 0;
 }
 
-int get_orientations(Polyomino poly, Polyomino **arr)
+int get_orientations(Polyomino poly, Polyomino arr[8])
 {
-    if (*arr)
-        return -1;
-
     // 4 rotations x 2 flips
-    Polyomino p[8];
-    p[0] = poly;
-    p[1] = zero_bounded(rotated(p[0]));
-    p[2] = zero_bounded(rotated(p[1]));
-    p[3] = zero_bounded(rotated(p[2]));
-    p[4] = zero_bounded(flipped(poly));
-    p[5] = zero_bounded(rotated(p[4]));
-    p[6] = zero_bounded(rotated(p[5]));
-    p[7] = zero_bounded(rotated(p[6]));
+    Polyomino o[8];
+    o[0] = zero_bounded(poly);
+    o[1] = zero_bounded(rotated(o[0]));
+    o[2] = zero_bounded(rotated(o[1]));
+    o[3] = zero_bounded(rotated(o[2]));
+    o[4] = zero_bounded(flipped(poly));
+    o[5] = zero_bounded(rotated(o[4]));
+    o[6] = zero_bounded(rotated(o[5]));
+    o[7] = zero_bounded(rotated(o[6]));
 
-    // determine duplicates
-    int dup[8] = {0};
-    int unique = 8;
-    for (int i = 0; i < 8; i++)
+    arr[0] = o[0];
+    int size = 1;
+
+    for (int i = 1; i < 8; i++)
     {
-        if (dup[i])
-            continue;
-
-        for (int j = i + 1; j < 8; j++)
+        // determine if duplicate
+        int dup = 0;
+        for (int j = 0; j < size; j++)
         {
-            if (is_equal(p[i], p[j]))
+            if (is_equal(o[i], arr[j]))
             {
-                dup[j] = 1;
-                unique--;
+                dup = 1;
+                break;
             }
         }
-    }
-
-    // create output array
-    int size = unique;
-    if (!(*arr = calloc(size, sizeof(Polyomino))))
-    {
-        return -2; // bad alloc
-    }
-
-    // populate array
-    for (int i = 0; i < 8; i++)
-    {
-        if (!dup[i])
+        // add nonduplicates
+        if (!dup)
         {
-            (*arr)[size - unique] = p[i];
-            unique--; // reuse as arr iterator
+            arr[size] = o[i];
+            size++;
         }
     }
     return size;
