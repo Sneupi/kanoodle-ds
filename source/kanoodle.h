@@ -45,11 +45,10 @@
 
 static const Polyomino NOODLES[] = {NOODLE_A, NOODLE_B, NOODLE_C, NOODLE_D, NOODLE_E, NOODLE_F, NOODLE_G, NOODLE_H, NOODLE_I, NOODLE_J, NOODLE_K, NOODLE_L};
 #define NOODLE_COUNT sizeof(NOODLES) / sizeof(Polyomino)
-#define MAX_CELLS MAX_POLY_CELLS // mirror of polyomino.h (must be >= 5 to support kanoodle pieces)
 
 #define BOARD_WIDTH 11
 #define BOARD_HEIGHT 5
-#define MAX_MOVES MAX_ROWS // mirror of dlx.h (must be <= cardinality of move space which is ~1800 in this puzzle arrangement)
+#define MAX_MOVES 900 // sample size of move-space
 
 // Get random sample of Kanoodle's entire move space
 size_t sample_move_space(Polyomino sample[], int k)
@@ -106,15 +105,11 @@ size_t sample_move_space(Polyomino sample[], int k)
     return n; // return population size
 }
 
-void print_solution(const Polyomino solution[12]) {
-
-    static const char *colors[] = {
-        "\x1b[31m", "\x1b[32m", "\x1b[33m", "\x1b[34m", "\x1b[35m", "\x1b[36m", "\x1b[37m", "\x1b[90m", "\x1b[91m", "\x1b[92m", "\x1b[93m", "\x1b[94m", "\x1b[95m", "\x1b[96m", "\x1b[97m"
-    };
+void print_solution(const Polyomino *solution, size_t size) {
 
     char board[BOARD_HEIGHT][BOARD_WIDTH];
 
-    for (uint16_t i = 0; i < 12; i++) {
+    for (uint16_t i = 0; i < size; i++) {
         const Polyomino p = solution[i];
         char char_id = p.id;
 
@@ -128,27 +123,37 @@ void print_solution(const Polyomino solution[12]) {
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
             char c = board[y][x];
-            const char *color = colors[c-NOODLE_A.id];
-            printf("%s%c ", color, c);
+            printf("%c ", c);
         }
         printf("\n");
     }
-    printf("\x1b[37m");
 }
 
-static Polyomino moves[MAX_MOVES]; // statically define to not consume very limited stack space
-
-int random_solution(Polyomino solution[12])
+size_t random_solution(Polyomino *solution)
 {
+    // allocate sample move set (save limited stack size by alloc heap)
+    Polyomino *moves = (Polyomino *)malloc(MAX_MOVES * sizeof(Polyomino));
+    if (!moves) return 0;
+
     // get random subset moves
     sample_move_space(moves, MAX_MOVES);
 
-    // init dlx (board size + piece count)
-    dlx_init(&solver, (BOARD_WIDTH*BOARD_HEIGHT)+NOODLE_COUNT);
+    uint16_t num_cols = (BOARD_WIDTH * BOARD_HEIGHT) + NOODLE_COUNT;
+
+    // calculate node allocation size: Root (1) + Column Headers (num_cols) + Data nodes
+    uint16_t num_data_nodes = 0;
+    for (uint16_t i = 0; i < MAX_MOVES; i++)
+        num_data_nodes += (1 + moves[i].size); // noodle id + cells
+
+    uint16_t all_nodes = 1 + num_cols + num_data_nodes;
+
+    // init solver dynamically (saves stack by using heap)
+    DLXSolver solver = (DLXSolver){0};
+    dlx_init(&solver, all_nodes, num_cols);
 
     // load moves into dlx
     for (uint16_t i = 0; i < MAX_MOVES; i++) {
-        uint16_t dlx_cols[1+MAX_CELLS]; // 1 piece id bit + cell cols
+        uint16_t dlx_cols[1 + moves[i].size]; // noodle-id bit + cell cols
         uint16_t col_cnt = 0;
 
         // load piece-identifying node (1-indexed bc 0 is root)
@@ -169,14 +174,20 @@ int random_solution(Polyomino solution[12])
         dlx_add_row(&solver, i, dlx_cols, col_cnt);
     }
 
-    // solve dlx and return
-    if (dlx_search(&solver)) {
+    size_t result_size = 0;
+
+    // solve dlx and get result
+    if (dlx_search(&solver, 0)) {
         for (uint16_t i = 0; i < solver.solution_size; i++) {
             uint16_t move_idx = solver.solution[i];
             solution[i] = moves[move_idx];
         }
-        return solver.solution_size; // solution found
+        result_size = solver.solution_size; 
     }
-    return 0; // no solution
-}
 
+    // cleanup allocations
+    dlx_free(&solver);
+    free(moves);
+
+    return result_size;
+}

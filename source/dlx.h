@@ -1,11 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-
-#define MAX_COLS 67
-#define MAX_ROWS 900
-#define NODES_PER_ROW 6
-#define MAX_NODES (1 + MAX_COLS + (MAX_ROWS * NODES_PER_ROW)) // Root + Headers + Data
 
 typedef struct {
     uint16_t left, right, up, down;
@@ -14,16 +10,42 @@ typedef struct {
 } DLXNode;
 
 typedef struct {
-    DLXNode nodes[MAX_NODES];
-    uint16_t col_size[MAX_COLS + 1]; // Node counts per column
+    DLXNode *nodes;         // (Dynamic alloc) Array of nodes
+    uint16_t *col_size;     // (Dynamic alloc) Array for node counts per column
     uint16_t node_count;
-    uint16_t solution[MAX_ROWS];
+    uint16_t *solution;     // (Dynamic alloc) Array of solution row ids
     uint16_t solution_size;
 } DLXSolver;
 
-static DLXSolver solver; // Reserve memory statically
+void dlx_free(DLXSolver *s) {
+    if (s->solution) {
+        free(s->solution);
+        s->solution = NULL;
+    }
+    if (s->nodes) {
+        free(s->nodes);
+        s->nodes = NULL;
+    }
+    if (s->col_size) {
+        free(s->col_size);
+        s->col_size = NULL;
+    }
+}
 
-void dlx_init(DLXSolver *s, uint16_t num_cols) {
+/**
+ * Initializes the solver by allocating exact node and column capacity.
+ * @param max_nodes Total node capacity (Root + Headers + Data nodes)
+ * @param num_cols Total number of active columns
+ */
+void dlx_init(DLXSolver *s, uint16_t max_nodes, uint16_t num_cols) {
+    // free any prev allocations
+    dlx_free(s);
+
+    // dynamic allocations
+    s->nodes = (DLXNode *)malloc(max_nodes * sizeof(DLXNode));
+    s->col_size = (uint16_t *)calloc(num_cols + 1, sizeof(uint16_t));
+    s->solution = NULL;
+
     s->node_count = num_cols + 1; // 0 is root, 1..num_cols are column headers
     s->solution_size = 0;
 
@@ -35,7 +57,6 @@ void dlx_init(DLXSolver *s, uint16_t num_cols) {
         s->nodes[i].down = i;
         s->nodes[i].col = i;
         s->nodes[i].row = 0;
-        s->col_size[i] = 0;
     }
 }
 
@@ -99,7 +120,7 @@ static inline void uncover(DLXSolver *s, uint16_t c) {
     s->nodes[s->nodes[c].left].right = c;
 }
 
-bool dlx_search(DLXSolver *s) {
+bool dlx_search(DLXSolver *s, int k) {
     // If root.right == 0, matrix is empty; exact cover found
     if (s->nodes[0].right == 0) {
         return true;
@@ -119,16 +140,25 @@ bool dlx_search(DLXSolver *s) {
     cover(s, c);
 
     for (uint16_t r = s->nodes[c].down; r != c; r = s->nodes[r].down) {
-        s->solution[s->solution_size++] = s->nodes[r].row;
 
         for (uint16_t j = s->nodes[r].right; j != r; j = s->nodes[j].right) {
             cover(s, s->nodes[j].col);
         }
 
-        if (dlx_search(s)) return true; // Solution found
+        if (dlx_search(s, k + 1)) {
+            
+            // Allocate solution path once
+            if (!s->solution && !(s->solution = (uint16_t *)malloc((k + 1) * sizeof(uint16_t))))
+                return false; // Bad malloc
+            
+            // Save k-th solution row
+            s->solution[k] = s->nodes[r].row;
+            s->solution_size++;
+
+            return true; // Solution found
+        }
 
         // Backtrack
-        s->solution_size--;
         for (uint16_t j = s->nodes[r].left; j != r; j = s->nodes[j].left) {
             uncover(s, s->nodes[j].col);
         }

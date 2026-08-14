@@ -5,8 +5,8 @@ cat > "$test_file.c" <<'EOF'
 void main() 
 { 
     Polyomino sol[12];
-    random_solution(sol);
-    print_solution(sol);
+    int size = random_solution(sol);
+    print_solution(sol, size);
 }
 EOF
 gcc -g polyomino.c kanoodle.h "$test_file.c" -o "$test_file"

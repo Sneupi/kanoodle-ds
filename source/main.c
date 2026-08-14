@@ -23,8 +23,8 @@ int main(int argc, char* argv[]) {
 		if (pressed & KEY_TOUCH) {
 			iprintf("\x1b[0;0H"); // goto 0,0
 			Polyomino sol[12];
-			random_solution(sol);
-			print_solution(sol);
+			int size = random_solution(sol);
+			print_solution(sol, size);
 			printf("SOL#: %d\n", n);
 			n++;
 		}
