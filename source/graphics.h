@@ -162,3 +162,85 @@ PolySprite init_poly_sprite(Polyomino poly, SpriteGfx gfx)
     set_poly_sprite(&p, 0, 0);
     return p;
 }
+
+// Fast fixed-point HSV color modifier for BGR555
+u16 modify_hsv(u16 color, int hue_shift, int sat_scale, int val_scale) {
+    // Extract 5-bit BGR components (0-31 range)
+    int r = (color) & 0x1F;
+    int g = (color >> 5) & 0x1F;
+    int b = (color >> 10) & 0x1F;
+
+    // Preserve the highest bit (used for transparency in sprite palettes)
+    u16 alpha_bit = color & 0x8000;
+
+    // Find Min, Max, and Chrominance (Delta)
+    int max = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
+    int min = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+    int delta = max - min;
+
+    // Convert RGB -> HSV
+    int h = 0;
+    int s = (max == 0) ? 0 : (delta * 256) / max;
+    int v = max;
+
+    if (delta > 0) {
+        if (max == r) {
+            h = ((g - b) * 256) / delta;
+            if (h < 0) h += 1536; // 6 sectors * 256
+        } else if (max == g) {
+            h = ((b - r) * 256) / delta + 512;
+        } else { // max == b
+            h = ((r - g) * 256) / delta + 1024;
+        }
+    }
+
+    // Apply Adjustments
+    h = (h + hue_shift) % 1536;
+    if (h < 0) h += 1536;
+
+    s = (s * sat_scale) >> 8; // Scale saturation (256 = 100%)
+    if (s > 256) s = 256;
+    if (s < 0)   s = 0;
+
+    v = (v * val_scale) >> 8; // Scale brightness (256 = 100%)
+    if (v > 31)  v = 31;
+    if (v < 0)   v = 0;
+
+    // Convert HSV -> RGB
+    if (s == 0) {
+        // Achromatic / Greyscale fast path
+        return alpha_bit | RGB15(v, v, v);
+    }
+
+    int region = h / 256;
+    int remainder = h % 256;
+
+    int p = (v * (256 - s)) >> 8;
+    int q = (v * (256 - ((s * remainder) >> 8))) >> 8;
+    int t = (v * (256 - ((s * (256 - remainder)) >> 8))) >> 8;
+
+    int nr = 0, ng = 0, nb = 0;
+
+    switch (region) {
+        case 0:  nr = v; ng = t; nb = p; break;
+        case 1:  nr = q; ng = v; nb = p; break;
+        case 2:  nr = p; ng = v; nb = t; break;
+        case 3:  nr = p; ng = q; nb = v; break;
+        case 4:  nr = t; ng = p; nb = v; break;
+        default: nr = v; ng = p; nb = q; break;
+    }
+
+    return alpha_bit | RGB15(nr, ng, nb);
+}
+
+/**
+ * @brief Helper to process an entire palette block
+ * @param hue_shift Integer in range 0 to 1535 (e.g., 256 rotates the color wheel by 60°).
+ * @param sat_scale 256 maintains current saturation, 0 converts to greyscale, 512 doubles saturation.
+ * @param val_scale 256 maintains current brightness, 128 cuts brightness in half, 512 doubles it (clamped to max 31).
+ */
+void modify_palette_hsv(u16* src_pal, u16* dest_pal, int count, int hue_shift, int sat_scale, int val_scale) {
+    for (int i = 0; i < count; i++) {
+        dest_pal[i] = modify_hsv(src_pal[i], hue_shift, sat_scale, val_scale);
+    }
+}

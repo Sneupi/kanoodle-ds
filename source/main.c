@@ -58,22 +58,36 @@ void init_config()
     oamInit(&oamSub, SpriteMapping_1D_32, false);
 }
 
+// helper function to init all HSV shifted polyBead graphics
+SpriteGfx init_poly_bead_hsv(int hue_shift, int sat_scale, int val_scale) {
+    static unsigned short polyBeadPalCopy[16];
+    static SpriteTemplate polyBeadTemplate = {
+        .size = SpriteSize_32x32,
+        .colorFormat = SpriteColorFormat_16Color,
+        .tiles = polyBeadTiles,
+        .tilesLen = polyBeadTilesLen,
+        .pal = polyBeadPalCopy, // local copy for hsv shifting
+        .palLen = polyBeadPalLen,
+    };
+    memcpy(polyBeadPalCopy, polyBeadPal, polyBeadPalLen); // get base palette (reds)
+    modify_palette_hsv(polyBeadPalCopy, polyBeadPalCopy, 16, hue_shift, sat_scale, val_scale);
+    return init_sprite_gfx(&oamMain, polyBeadTemplate);
+
+}
+
 int main(void)
 {
 
     init_config();
 
-    SpriteTemplate polyBeadTemplate = {
-        .size = SpriteSize_32x32,
-        .colorFormat = SpriteColorFormat_16Color,
-        .tiles = polyBeadTiles,
-        .tilesLen = polyBeadTilesLen,
-        .pal = polyBeadPal,
-        .palLen = polyBeadPalLen,
-    };
-    SpriteGfx polyBeadGfx = init_sprite_gfx(&oamMain, polyBeadTemplate);
-    PolySprite noodleAPolySprite = init_poly_sprite(NOODLE_A, polyBeadGfx);
-    shift_poly_sprite(&noodleAPolySprite, 20, 20);
+    SpriteGfx polyBeadGfxRed = init_poly_bead_hsv(0, 256, 256);
+    SpriteGfx polyBeadGfxGreen = init_poly_bead_hsv(512, 200, 128);
+
+    // Lets make some noodles
+    PolySprite noodleAPolySprite = init_poly_sprite(NOODLE_A, polyBeadGfxRed);
+    set_poly_sprite(&noodleAPolySprite, 100, 100);
+    PolySprite noodleBPolySprite = init_poly_sprite(NOODLE_B, polyBeadGfxGreen);
+    set_poly_sprite(&noodleBPolySprite, 20, 20);
 
     while (1)
     {
