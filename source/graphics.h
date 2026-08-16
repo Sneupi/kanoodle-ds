@@ -3,12 +3,16 @@
 #include <nds.h>
 #include "polyomino.h" // for PolySprite
 
+#define POLYBEAD_WIDTH 20 // pixel width
+#define POLYBEAD_HEIGHT 20 // pixel height
+
+// universal counters to avoid manual tracking
 static unsigned int nextOamIdMain = 0;
 static unsigned int nextOamIdSub = 0;
 static unsigned int nextPalSlotMain = 0;
 static unsigned int nextPalSlotSub = 0;
 
-// sprite graphics tem
+// sprite graphics template
 typedef struct
 {
     SpriteSize size;
@@ -41,11 +45,13 @@ typedef struct
     int oamId;
 } Sprite;
 
+// get next uninitialized sprite id
 unsigned int nextOamId(OamState *oam)
 {
     return (oam == &oamMain) ? nextOamIdMain++ : nextOamIdSub++;
 }
 
+// get next uninitialized palette slot
 unsigned int nextPalSlot(OamState *oam)
 {
     return (oam == &oamMain) ? nextPalSlotMain++ : nextPalSlotSub++;
@@ -87,9 +93,10 @@ Sprite init_sprite(SpriteGfx gfx)
         false, false,        // VFlip, HFlip
         false                // Mosaic
     );
-    return (Sprite){.x = 0, .y = 0, .w = 32, .h = 32, .oam = gfx.oam, .oamId = id}; // FIXME cheap hack make all 32x32
+    return (Sprite){.x = 0, .y = 0, .w = 32, .h = 32, .oam = gfx.oam, .oamId = id}; // FIXME cheap hack that makes all 32x32, replace with drop-in conversions 
 }
 
+// set sprite location x,y
 void set_sprite(Sprite *s, int x, int y)
 {
     s->x = x;
@@ -97,11 +104,13 @@ void set_sprite(Sprite *s, int x, int y)
     oamSetXY(s->oam, s->oamId, x, y);
 }
 
+// shift sprite location by dx,dy
 void shift_sprite(Sprite *s, int dx, int dy)
 {
     set_sprite(s, (s->x + dx), (s->y + dy));
 }
 
+// polyomino sprite instance
 typedef struct
 {
     int x;
@@ -111,6 +120,7 @@ typedef struct
     Sprite sprites[MAX_POLY_CELLS];
 } PolySprite;
 
+// polyomino sprite base coord (x,y) relocation with cell-relative shifts
 void set_poly_sprite(PolySprite *p, int x, int y)
 {
     p->x = x;
@@ -124,11 +134,13 @@ void set_poly_sprite(PolySprite *p, int x, int y)
     }
 }
 
+// polyomino sprite relative shift of base coords (x,y)
 void shift_poly_sprite(PolySprite *p, int dx, int dy)
 {
     set_poly_sprite(p, (p->x + dx), (p->y + dy));
 }
 
+// initialize a multi-sprite polyomino sprite in OAM
 PolySprite init_poly_sprite(Polyomino poly, SpriteGfx gfx)
 {
     PolySprite p = {0};
@@ -140,9 +152,11 @@ PolySprite init_poly_sprite(Polyomino poly, SpriteGfx gfx)
     for (int i = 0; i < p.size; i++) {
         Sprite *s = &p.sprites[i];
         *s = init_sprite(gfx);
-        // FIXME: hackey way to get polyBead gfx to align pixel perfect
-        s->h = 20;
-        s->w = 20;
+
+        // these ensure during relative shifts of cells, 
+        // they all appear nicely connected
+        s->h = POLYBEAD_HEIGHT;
+        s->w = POLYBEAD_WIDTH;
     }
 
     set_poly_sprite(&p, 0, 0);

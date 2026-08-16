@@ -73,6 +73,7 @@ int main(void)
     };
     SpriteGfx polyBeadGfx = init_sprite_gfx(&oamMain, polyBeadTemplate);
     PolySprite noodleAPolySprite = init_poly_sprite(NOODLE_A, polyBeadGfx);
+    shift_poly_sprite(&noodleAPolySprite, 20, 20);
 
     while (1)
     {
