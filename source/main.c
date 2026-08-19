@@ -84,9 +84,9 @@ int main(void)
     SpriteGfx polyBeadGfxGreen = init_poly_bead_hsv(512, 200, 128);
 
     // Lets make some noodles
-    PolySprite noodleAPolySprite = init_poly_sprite(NOODLE_A, polyBeadGfxRed);
+    PolySprite noodleAPolySprite = init_poly_sprite(NOODLE('A'), polyBeadGfxRed);
     set_poly_sprite(&noodleAPolySprite, 100, 100);
-    PolySprite noodleBPolySprite = init_poly_sprite(NOODLE_B, polyBeadGfxGreen);
+    PolySprite noodleBPolySprite = init_poly_sprite(NOODLE('B'), polyBeadGfxGreen);
     set_poly_sprite(&noodleBPolySprite, 20, 20);
 
     while (1)

@@ -30,13 +30,30 @@
  * found first, as well as lowering runtime and memory cost.
  */
 
+const Polyomino NOODLES[] = {
+    {.id = 'A', .size = 4, .cell = {{0, 0}, {1, 0}, {2, 0}, {0, 1}}},
+    {.id = 'B', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {1, 1}}},
+    {.id = 'C', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {3, 0}, {0, 1}}},
+    {.id = 'D', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {3, 0}, {1, 1}}},
+    {.id = 'E', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {3, 1}}},
+    {.id = 'F', .size = 3, .cell = {{0, 0}, {1, 0}, {0, 1}}},
+    {.id = 'G', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {0, 2}}},
+    {.id = 'H', .size = 5, .cell = {{0, 0}, {1, 0}, {1, 1}, {2, 1}, {2, 2}}},
+    {.id = 'I', .size = 5, .cell = {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}}},
+    {.id = 'J', .size = 4, .cell = {{0, 0}, {1, 0}, {2, 0}, {3, 0}}},
+    {.id = 'K', .size = 4, .cell = {{0, 0}, {1, 0}, {0, 1}, {1, 1}}},
+    {.id = 'L', .size = 5, .cell = {{1, 0}, {0, 1}, {1, 1}, {2, 1}, {1, 2}}},
+};
+
+const size_t NOODLES_SIZE = sizeof(NOODLES) / sizeof(NOODLES[0]);
+
 size_t sample_move_space(Polyomino sample[], int k)
 {
     srand(time(NULL));
     size_t n = 0; // sampling counter
 
     // for each noodle
-    for (int ndl = 0; ndl < NOODLE_COUNT; ndl++)
+    for (int ndl = 0; ndl < NOODLES_SIZE; ndl++)
     {
         // gen orientations
         Polyomino orients[8]; // upto 8 possible ways
@@ -112,21 +129,21 @@ void print_solution(const Polyomino *solution, size_t size)
     }
 }
 
-size_t random_solution(Polyomino *solution)
+size_t random_solution(Polyomino *solution, int k)
 {
     // allocate sample move set (save limited stack size by alloc heap)
-    Polyomino *moves = (Polyomino *)malloc(MOVES_SAMPLE * sizeof(Polyomino));
+    Polyomino *moves = (Polyomino *)malloc(k * sizeof(Polyomino));
     if (!moves)
         return 0;
 
     // get random subset moves
-    sample_move_space(moves, MOVES_SAMPLE);
+    sample_move_space(moves, k);
 
-    uint16_t num_cols = (BOARD_WIDTH * BOARD_HEIGHT) + NOODLE_COUNT;
+    uint16_t num_cols = (BOARD_WIDTH * BOARD_HEIGHT) + NOODLES_SIZE;
 
     // calculate node allocation size: Root (1) + Column Headers (num_cols) + Data nodes
     uint16_t num_data_nodes = 0;
-    for (uint16_t i = 0; i < MOVES_SAMPLE; i++)
+    for (uint16_t i = 0; i < k; i++)
         num_data_nodes += (1 + moves[i].size); // noodle id + cells
 
     uint16_t all_nodes = 1 + num_cols + num_data_nodes;
@@ -136,13 +153,13 @@ size_t random_solution(Polyomino *solution)
     dlx_init(&solver, all_nodes, num_cols);
 
     // load moves into dlx
-    for (uint16_t i = 0; i < MOVES_SAMPLE; i++)
+    for (uint16_t i = 0; i < k; i++)
     {
         uint16_t dlx_cols[1 + moves[i].size]; // noodle-id bit + cell cols
         uint16_t col_cnt = 0;
 
         // load piece-identifying node (1-indexed bc 0 is root)
-        dlx_cols[col_cnt++] = 1 + (moves[i].id - NOODLES[0].id);
+        dlx_cols[col_cnt++] = 1 + (moves[i].id - 'A');
 
         // load cell-identifying nodes
         for (uint8_t c = 0; c < moves[i].size; c++)
@@ -151,7 +168,7 @@ size_t random_solution(Polyomino *solution)
             int16_t y = moves[i].cell[c].y;
 
             uint16_t cell_index = (y * BOARD_WIDTH) + x;
-            uint16_t cell_col = 1 + NOODLE_COUNT + cell_index; // board indices start after root & piece cols
+            uint16_t cell_col = 1 + NOODLES_SIZE + cell_index; // board indices start after root & piece cols
 
             dlx_cols[col_cnt++] = cell_col;
         }
