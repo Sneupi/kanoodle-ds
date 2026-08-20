@@ -29,7 +29,7 @@ BUILD    := build
 SOURCES  := source
 INCLUDES := include
 DATA     := data
-GRAPHICS := graphics/background graphics/sprite
+GRAPHICS := graphics
 AUDIO    :=
 ICON     :=
 

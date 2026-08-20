@@ -1,0 +1,3 @@
+# 256-color tilemap with transparency enabled, non-optimized
+# which allows sprite access as offsets of master sprite sheet
+-gB8 -gTFF00FF -gH!
