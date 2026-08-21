@@ -83,6 +83,7 @@ void init_graphics()
     vramSetBankC(VRAM_C_SUB_BG);
     vramSetBankD(VRAM_D_SUB_SPRITE);
 
+    // enable ext bg palettes for flexibility
     bgExtPaletteEnable();
     bgExtPaletteEnableSub();
 
@@ -151,17 +152,19 @@ void init_graphics()
     // this means you can only use BgType_Text8bpp or BgType_ExRotation
     // http://mtheall.com/vram.html#T0=1&NT0=192&MB0=6&TB0=0&S0=0&T1=1&NT1=576&MB1=7&TB1=1&S1=0
     //
-    // Background map allocation (mapBase) is chunked into 2KB blocks,
-    // while tile/gfx allocation (tileBase) is chunked into 16KB blocks.
-    // This means we choose tileBase indices first:
+    // Background map allocation (mapBase) is chunked into 2KB blocks/index
+    // while tile/gfx allocation (tileBase) is chunked into 16KB blocks/index
+    // This means we choose the tileBase indices first for each bg:
     // tileBase 0 = address 0KB
     // tileBase 1 = address 16KB
     // tileBase 2 = address 32KB
     // ..and do a little calculation to place each bg's mapBase (usually ~2KB) at
-    // the last mapBase index inside each backgrounds tileBase (for ease of setup):
+    // the highest mapBase index inside each bg's tileBase vram allocation (for ease of setup & understanding):
+    // | TILEBASE BEGIN | <=14KB of Tiles | (empty space) | <= 2KB Map | TILEBASE END |
     // mapBase = (((tileBase + 1) * 16KB) - 2KB) / 2KB = (tileBase * 8) / 7
-    // ..This is possible since none of these background tiles exceed more than 14KB,
-    // so we can squash their maps into the space at the end of their tile allocation block.
+    // ..This is possible since none of the used background tiles exceed more than 14KB,
+    // so we can squeeze their map allocation into the space at the end of their tiles allocated chunk space
+    // for all backgrounds in this game.
     logoBg = bgInit(1, BgType_Text8bpp, BgSize_T_256x256, ((0 * 8) + 7), 0);
     controlHintsBg = bgInit(2, BgType_Text8bpp, BgSize_T_256x256, ((1 * 8) + 7), 1);
     backgroundBgMain = bgInit(3, BgType_Text8bpp, BgSize_T_256x256, ((2 * 8) + 7), 2);
