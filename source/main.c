@@ -10,10 +10,12 @@ int main(void)
     while (1)
     {
         swiWaitForVBlank();
+        bgUpdate();
 
         // Ensure OAM registers are updated every frame
         oamUpdate(&oamMain);
         oamUpdate(&oamSub);
+    
     }
 
     return 0;

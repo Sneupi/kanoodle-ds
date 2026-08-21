@@ -32,6 +32,13 @@ extern PolySprite noodleSub[12];
 extern Sprite noodleOnIcon[12];
 extern Sprite noodleOffIcon[12];
 
+extern int logoBg;
+extern int controlHintsBg;
+extern int backgroundBgMain;
+extern int difficultyBg;
+extern int boardBg;
+extern int backgroundBgSub;
+
 Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h);
 
 PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h);
