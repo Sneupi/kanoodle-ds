@@ -17,8 +17,8 @@ Sprite panelSprite;
 PolySprite selectionPolySprite;
 PolySprite noodlePolySpritesMain[12];
 PolySprite noodlePolySpritesSub[12];
-Sprite noodleOnSprites[12];
 Sprite noodleOffSprites[12];
+Sprite noodleOnSprites[12];
 
 int logoBg;
 int controlHintsBg;
@@ -26,6 +26,8 @@ int backgroundBgMain;
 int difficultyBg;
 int boardBg;
 int backgroundBgSub;
+
+bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
 
 /**
  * Helpers
@@ -124,9 +126,9 @@ void init_graphics()
     rotateSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
     panelSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOnSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        noodleOffSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOffSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        noodleOnSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
@@ -219,8 +221,8 @@ void menu_screen()
     {
         hide_poly_sprite(&noodlePolySpritesMain[i], true);
         hide_poly_sprite(&noodlePolySpritesSub[i], true);
-        hide_sprite(&noodleOnSprites[i], true);
         hide_sprite(&noodleOffSprites[i], true);
+        hide_sprite(&noodleOnSprites[i], true);
     }
     hide_bg(controlHintsBg, true);
     hide_bg(boardBg, true);
@@ -239,8 +241,8 @@ void game_screen()
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&noodlePolySpritesSub[i], true);
-        hide_sprite(&noodleOnSprites[i], true);
         hide_sprite(&noodleOffSprites[i], true);
+        hide_sprite(&noodleOnSprites[i], true);
     }
     hide_bg(logoBg, true);
     hide_bg(difficultyBg, true);
@@ -257,6 +259,22 @@ void game_screen()
     hide_bg(backgroundBgMain, false);
     hide_bg(boardBg, false);
     hide_bg(backgroundBgSub, false);
+}
+
+void hide_panel(bool hide)
+{
+    for (int i = 0; i < 12; i++)
+    {
+        Sprite *button = (panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i];
+        hide_sprite(button, hide);
+    }
+}
+
+void press_panel_button(int i)
+{
+    hide_sprite((panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i], true);
+    panelState[i] = !panelState[i];
+    hide_sprite((panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i], false);
 }
 
 /**

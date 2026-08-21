@@ -29,8 +29,8 @@ extern Sprite panelSprite;
 extern PolySprite selectionPolySprite;
 extern PolySprite noodlePolySpritesMain[12];
 extern PolySprite noodlePolySpritesSub[12];
-extern Sprite noodleOnSprites[12];
 extern Sprite noodleOffSprites[12];
+extern Sprite noodleOnSprites[12];
 
 extern int logoBg;
 extern int controlHintsBg;
@@ -48,6 +48,10 @@ void init_graphics();
 void menu_screen();
 
 void game_screen();
+
+void hide_panel(bool hide);
+
+void press_panel_button(int i);
 
 /**
  * Sprites

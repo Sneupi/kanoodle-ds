@@ -6,7 +6,8 @@ int main(void)
 {
     init_graphics();
 
-    menu_screen();
+    game_screen();
+    hide_panel(false);
 
     touchPosition touch;
     bool state_screen = 0;
@@ -24,10 +25,11 @@ int main(void)
         if (pressed & KEY_TOUCH)
         {
             state_screen = !state_screen;
-            if (state_screen)
-                menu_screen();
-            else
-                game_screen();
+            press_panel_button(0);
+            // if (state_screen)
+            //     hide_panel(true);
+            // else
+            //     hide_panel(false);
         }
 
         bgUpdate();
