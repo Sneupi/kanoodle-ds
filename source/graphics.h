@@ -39,8 +39,42 @@ extern int difficultyBg;
 extern int boardBg;
 extern int backgroundBgSub;
 
-Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h);
-
-PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h);
+/**
+ * Game Graphics
+ */
 
 void init_graphics();
+
+void menu_screen();
+
+void game_screen();
+
+/**
+ * Sprites
+ */
+
+void hide_sprite(Sprite *s, bool hide);
+
+void place_sprite(Sprite *s, int x, int y);
+
+void shift_sprite(Sprite *s, int dx, int dy);
+
+/**
+ * PolySprites
+ */
+
+void hide_poly_sprite(PolySprite *s, bool hide);
+
+void place_poly_sprite(PolySprite *s, int x, int y);
+
+void shift_poly_sprite(PolySprite *s, int dx, int dy);
+
+void rotate_poly_sprite(PolySprite *s);
+
+void flip_poly_sprite(PolySprite *s);
+
+/**
+ * Backgrounds
+ */
+
+void hide_bg(int id, bool hide);

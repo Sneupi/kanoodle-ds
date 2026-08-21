@@ -27,6 +27,10 @@ int difficultyBg;
 int boardBg;
 int backgroundBgSub;
 
+/**
+ * Helpers
+ */
+
 Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h)
 {
     oamSet(
@@ -47,7 +51,7 @@ Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, in
     return (Sprite){x, y, w, h, oam, (*nextId)++};
 }
 
-PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h)
+PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int cell_w_px, int cell_h_px)
 {
     PolySprite ps;
     ps.poly = zero_bounded(p);
@@ -56,12 +60,16 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, i
     ps.y = y;
     for (int i = 0; i < ps.size; i++)
     {
-        int xOffset = x + (w * ps.poly.cell[i].x);
-        int yOffset = y + (h * ps.poly.cell[i].y);
-        ps.sprites[i] = init_sprite(oam, nextId, gfx, priority, xOffset, yOffset, w, h);
+        int xOffset = x + (cell_w_px * ps.poly.cell[i].x);
+        int yOffset = y + (cell_h_px * ps.poly.cell[i].y);
+        ps.sprites[i] = init_sprite(oam, nextId, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px);
     }
     return ps;
 }
+
+/**
+ * Game Graphics
+ */
 
 void init_graphics()
 {
@@ -180,4 +188,127 @@ void init_graphics()
     // http://mtheall.com/banks.html#A=MBG0&C=MBG2&E=BGEPAL&H=SBGEPAL
     vramSetBankE(VRAM_E_BG_EXT_PALETTE);     // for main engine
     vramSetBankH(VRAM_H_SUB_BG_EXT_PALETTE); // for sub engine
+}
+
+void menu_screen()
+{
+    // HIDE
+    hide_sprite(&flipSprite, true);
+    hide_sprite(&rotateSprite, true);
+    hide_sprite(&panelSprite, true);
+    hide_poly_sprite(&selectionPolySprite, true);
+    for (int i = 0; i < 12; i++) {
+        hide_poly_sprite(&noodlePolySpritesMain[i], true);
+        hide_poly_sprite(&noodlePolySpritesSub[i], true);
+        hide_sprite(&noodleOnSprites[i], true);
+        hide_sprite(&noodleOffSprites[i], true);
+    }
+    hide_bg(controlHintsBg, true);
+    hide_bg(boardBg, true);
+
+    // SHOW
+    hide_bg(logoBg, false);
+    hide_bg(backgroundBgMain, false);
+    hide_bg(difficultyBg, false);
+    hide_bg(backgroundBgSub, false);
+}
+
+void game_screen()
+{
+    // HIDE
+    hide_poly_sprite(&selectionPolySprite, true);
+    for (int i = 0; i < 12; i++) {
+        hide_poly_sprite(&noodlePolySpritesSub[i], true);
+        hide_sprite(&noodleOnSprites[i], true);
+        hide_sprite(&noodleOffSprites[i], true);
+    }
+    hide_bg(logoBg, true);
+    hide_bg(difficultyBg, true);
+    
+    // SHOW
+    hide_sprite(&flipSprite, false);
+    hide_sprite(&rotateSprite, false);
+    hide_sprite(&panelSprite, false);
+    for (int i = 0; i < 12; i++) {
+        PolySprite *nps = &noodlePolySpritesMain[i];
+        int x = (rand() % (256 - 80));
+        int y = (rand() % (192 - 80));
+        place_poly_sprite(nps, x, y);
+        hide_poly_sprite(nps, false);
+    }
+    hide_bg(controlHintsBg, false);
+    hide_bg(backgroundBgMain, false);
+    hide_bg(boardBg, false);
+    hide_bg(backgroundBgSub, false);
+}
+
+/**
+ * Sprites
+ */
+
+void hide_sprite(Sprite *s, bool hide)
+{
+    oamSetHidden(s->oam, s->oamId, hide);
+}
+
+void place_sprite(Sprite *s, int x, int y)
+{
+    oamSetXY(s->oam, s->oamId, x, y);
+}
+
+void shift_sprite(Sprite *s, int dx, int dy)
+{
+    place_sprite(s, s->x + dx, s->y + dy);
+}
+
+/**
+ * PolySprites
+ */
+
+void hide_poly_sprite(PolySprite *s, bool hide)
+{
+    for (int i = 0; i < s->size; i++)
+        hide_sprite(&s->sprites[i], hide);
+}
+
+void place_poly_sprite(PolySprite *s, int x, int y)
+{
+    s->x = x;
+    s->y = y;
+    for (int i = 0; i < s->size; i++)
+    {
+        Sprite *spr = &s->sprites[i];
+        int xOffset = x + (spr->w * s->poly.cell[i].x);
+        int yOffset = y + (spr->h * s->poly.cell[i].y);
+        place_sprite(spr, xOffset, yOffset);
+    }
+}
+
+void shift_poly_sprite(PolySprite *s, int dx, int dy)
+{
+    place_poly_sprite(s, s->x + dx, s->y + dy);
+}
+
+void rotate_poly_sprite(PolySprite *s)
+{
+    s->poly = zero_bounded(rotated(s->poly));
+    place_poly_sprite(s, s->x, s->y);
+}
+
+void flip_poly_sprite(PolySprite *s)
+{
+    s->poly = zero_bounded(flipped(s->poly));
+    place_poly_sprite(s, s->x, s->y);
+}
+
+/**
+ * Backgrounds
+ */
+
+void hide_bg(int id, bool hide)
+{
+    if (hide)
+        bgHide(id);
+    else
+        bgShow(id);
 }
