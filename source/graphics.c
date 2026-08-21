@@ -11,14 +11,14 @@
 #include "difficulty.h"
 #include "board.h"
 
-Sprite flipIcon;
-Sprite rotateIcon;
-Sprite noodleIcon;
-PolySprite noodleHighlight;
-PolySprite noodleMain[12];
-PolySprite noodleSub[12];
-Sprite noodleOnIcon[12];
-Sprite noodleOffIcon[12];
+Sprite flipSprite;
+Sprite rotateSprite;
+Sprite panelSprite;
+PolySprite selectionPolySprite;
+PolySprite noodlePolySpritesMain[12];
+PolySprite noodlePolySpritesSub[12];
+Sprite noodleOnSprites[12];
+Sprite noodleOffSprites[12];
 
 int logoBg;
 int controlHintsBg;
@@ -107,17 +107,17 @@ void init_graphics()
     int nextIdMain = 0;
     int nextIdSub = 0;
     for (int i = 0; i < 12; i++)
-        noodleMain[i] = init_poly_sprite(NOODLES[i], &oamMain, &nextIdMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
+        noodlePolySpritesMain[i] = init_poly_sprite(NOODLES[i], &oamMain, &nextIdMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
-        noodleSub[i] = init_poly_sprite(NOODLES[i], &oamSub, &nextIdSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
-    noodleHighlight = init_poly_sprite(NOODLE('B'), &oamSub, &nextIdSub, gfxSub[3], 0, 0, 0, 22, 22);
-    flipIcon = init_sprite(&oamSub, &nextIdSub, gfxSub[0], 0, 224, 160, 32, 32);
-    rotateIcon = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
-    noodleIcon = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
+        noodlePolySpritesSub[i] = init_poly_sprite(NOODLES[i], &oamSub, &nextIdSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
+    selectionPolySprite = init_poly_sprite(NOODLE('B'), &oamSub, &nextIdSub, gfxSub[3], 0, 0, 0, 22, 22);
+    flipSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[0], 0, 224, 160, 32, 32);
+    rotateSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
+    panelSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOnIcon[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        noodleOnSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOffIcon[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        noodleOffSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
 
     // 4.3. Update hardware OAM
     oamUpdate(&oamMain);

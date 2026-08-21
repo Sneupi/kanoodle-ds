@@ -23,14 +23,14 @@ typedef struct
     Sprite sprites[MAX_POLY_CELLS];
 } PolySprite;
 
-extern Sprite flipIcon;
-extern Sprite rotateIcon;
-extern Sprite noodleIcon;
-extern PolySprite noodleHighlight;
-extern PolySprite noodleMain[12];
-extern PolySprite noodleSub[12];
-extern Sprite noodleOnIcon[12];
-extern Sprite noodleOffIcon[12];
+extern Sprite flipSprite;
+extern Sprite rotateSprite;
+extern Sprite panelSprite;
+extern PolySprite selectionPolySprite;
+extern PolySprite noodlePolySpritesMain[12];
+extern PolySprite noodlePolySpritesSub[12];
+extern Sprite noodleOnSprites[12];
+extern Sprite noodleOffSprites[12];
 
 extern int logoBg;
 extern int controlHintsBg;
