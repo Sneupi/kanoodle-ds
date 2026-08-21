@@ -127,7 +127,22 @@ void init_graphics()
     for (int i = 0; i < 12; i++)
         noodleOffSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
 
-    // 4.3. Update hardware OAM
+    // 4.3. Generate initial placement layout once
+    Polyomino sol[12];
+    random_solution(sol, 900);
+    for (int i = 0; i < 12; i++)
+    {
+        for (int j = 0; j < 12; j++)
+        {
+            if (noodlePolySpritesMain[i].poly.id == sol[j].id)
+            {
+                noodlePolySpritesMain[i].poly = sol[j];
+                place_poly_sprite(&noodlePolySpritesMain[i], 18, 16);
+            }
+        }
+    }
+
+    // 4.4. Update hardware OAM
     oamUpdate(&oamMain);
     oamUpdate(&oamSub);
 
@@ -197,7 +212,8 @@ void menu_screen()
     hide_sprite(&rotateSprite, true);
     hide_sprite(&panelSprite, true);
     hide_poly_sprite(&selectionPolySprite, true);
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 12; i++)
+    {
         hide_poly_sprite(&noodlePolySpritesMain[i], true);
         hide_poly_sprite(&noodlePolySpritesSub[i], true);
         hide_sprite(&noodleOnSprites[i], true);
@@ -217,24 +233,22 @@ void game_screen()
 {
     // HIDE
     hide_poly_sprite(&selectionPolySprite, true);
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 12; i++)
+    {
         hide_poly_sprite(&noodlePolySpritesSub[i], true);
         hide_sprite(&noodleOnSprites[i], true);
         hide_sprite(&noodleOffSprites[i], true);
     }
     hide_bg(logoBg, true);
     hide_bg(difficultyBg, true);
-    
+
     // SHOW
     hide_sprite(&flipSprite, false);
     hide_sprite(&rotateSprite, false);
     hide_sprite(&panelSprite, false);
-    for (int i = 0; i < 12; i++) {
-        PolySprite *nps = &noodlePolySpritesMain[i];
-        int x = (rand() % (256 - 80));
-        int y = (rand() % (192 - 80));
-        place_poly_sprite(nps, x, y);
-        hide_poly_sprite(nps, false);
+    for (int i = 0; i < 12; i++)
+    {
+        hide_poly_sprite(&noodlePolySpritesMain[i], false);
     }
     hide_bg(controlHintsBg, false);
     hide_bg(backgroundBgMain, false);
