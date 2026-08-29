@@ -3,14 +3,15 @@
 #include "polyomino.h"
 
 // vram-initialized sprite instance
-typedef struct
+typedef struct Sprite
 {
-    int x;                  // 0-256
-    int y;                  // 0-192
-    int w;                  // true pixel width
-    int h;                  // true pixel height
-    OamState *oam;          // &oamSub OR &oamMain
-    int oamId;              // 0-127
+    int x;                      // 0-256
+    int y;                      // 0-192
+    int w;                      // true pixel width
+    int h;                      // true pixel height
+    OamState *oam;              // &oamSub OR &oamMain
+    int oamId;                  // 0-127
+    void (*callback)(struct Sprite *); // on-touch event
 } Sprite;
 
 // polyomino sprite instance

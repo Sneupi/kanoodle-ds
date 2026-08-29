@@ -11,6 +11,9 @@
 #include "difficulty.h"
 #include "board.h"
 
+int spriteCountMain = 0;
+int spriteCountSub = 0;
+
 Sprite sub_sp_flip;
 Sprite sub_sp_rotate;
 Sprite sub_sp_panel;
@@ -29,15 +32,25 @@ int sub_bg_background;
 
 bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
 
+void cb_set_draggable(Sprite *s) {}      // FIXME impl (highlighted & drag)
+void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
+void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
+void cb_toggle_panel(Sprite *s) {}       // FIXME impl
+void cb_noodle_on(Sprite *s) {}          // FIMXE impl
+void cb_noodle_off(Sprite *s) {}         // FIMXE impl
+
 /**
  * Helpers
  */
 
-Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int w, int h)
+Sprite init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, int h, void (*callback)(Sprite *))
 {
+    // Assign unique non-overlapping IDs via global counter
+    int id = (oam == &oamMain) ? spriteCountMain++ : spriteCountSub++;
+    // NOTE: sprite sizes standardized, thus hardcode SpriteSize & SpriteColorFormat
     oamSet(
         oam,                        // Main or Sub OAM
-        *nextId,                    // OAM entry ID (0 to 127)
+        id,                         // OAM entry ID (0 to 127)
         x, y,                       // Screen coordinates
         priority,                   // Priority (0-3)
         0,                          // Palette index (0 for 256-color)
@@ -50,10 +63,18 @@ Sprite init_sprite(OamState *oam, int *nextId, u16 *gfx, int priority, int x, in
         false, false,               // VFlip, HFlip
         false                       // Mosaic
     );
-    return (Sprite){x, y, w, h, oam, (*nextId)++};
+    return (Sprite){
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h,
+        .oam = oam,
+        .oamId = id,
+        .callback = callback,
+    };
 }
 
-PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, int priority, int x, int y, int cell_w_px, int cell_h_px)
+PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, int x, int y, int cell_w_px, int cell_h_px)
 {
     PolySprite ps;
     ps.poly = zero_bounded(p);
@@ -64,7 +85,7 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, int *nextId, u16 *gfx, i
     {
         int xOffset = x + (cell_w_px * ps.poly.cell[i].x);
         int yOffset = y + (cell_h_px * ps.poly.cell[i].y);
-        ps.sprites[i] = init_sprite(oam, nextId, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px);
+        ps.sprites[i] = init_sprite(oam, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px, cb_set_draggable);
     }
     return ps;
 }
@@ -115,20 +136,18 @@ void init_graphics()
     }
 
     // 4.2. Set OAM entry attributes w proper
-    int nextIdMain = 0;
-    int nextIdSub = 0;
     for (int i = 0; i < 12; i++)
-        main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, &nextIdMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
+        main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
-        sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, &nextIdSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
-    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, &nextIdSub, gfxSub[3], 0, 0, 0, 22, 22);
-    sub_sp_flip = init_sprite(&oamSub, &nextIdSub, gfxSub[0], 0, 224, 160, 32, 32);
-    sub_sp_rotate = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
-    sub_sp_panel = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
+        sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
+    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, gfxSub[3], 0, 0, 0, 22, 22);
+    sub_sp_flip = init_sprite(&oamSub, gfxSub[0], 0, 224, 160, 32, 32, cb_flip_highlighted);
+    sub_sp_rotate = init_sprite(&oamSub, gfxSub[1], 0, 224, 128, 32, 32, cb_rotate_highlighted);
+    sub_sp_panel = init_sprite(&oamSub, gfxSub[2], 0, 192, 160, 32, 32, cb_toggle_panel);
     for (int i = 0; i < 12; i++)
-        sub_sp_panel_off[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        sub_sp_panel_off[i] = init_sprite(&oamSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_noodle_off);
     for (int i = 0; i < 12; i++)
-        sub_sp_panel_on[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        sub_sp_panel_on[i] = init_sprite(&oamSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_noodle_on);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
