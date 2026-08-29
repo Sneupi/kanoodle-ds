@@ -5,39 +5,23 @@
 // vram-initialized sprite instance
 typedef struct
 {
-    int x;
-    int y;
-    int w;
-    int h;
-    OamState *oam;
-    int oamId;
+    int x;                  // 0-256
+    int y;                  // 0-192
+    int w;                  // true pixel width
+    int h;                  // true pixel height
+    OamState *oam;          // &oamSub OR &oamMain
+    int oamId;              // 0-127
 } Sprite;
 
 // polyomino sprite instance
 typedef struct
 {
-    int x;
-    int y;
-    Polyomino poly;
-    int size;
-    Sprite sprites[MAX_POLY_CELLS];
+    int x;                          // base x coord
+    int y;                          // base y coord
+    Polyomino poly;                 // polyomino rep
+    int size;                       // polyomino cell count
+    Sprite sprites[MAX_POLY_CELLS]; // polyomino cell sprites
 } PolySprite;
-
-extern Sprite flipSprite;
-extern Sprite rotateSprite;
-extern Sprite panelSprite;
-extern PolySprite selectionPolySprite;
-extern PolySprite noodlePolySpritesMain[12];
-extern PolySprite noodlePolySpritesSub[12];
-extern Sprite noodleOffSprites[12];
-extern Sprite noodleOnSprites[12];
-
-extern int logoBg;
-extern int controlHintsBg;
-extern int backgroundBgMain;
-extern int difficultyBg;
-extern int boardBg;
-extern int backgroundBgSub;
 
 /**
  * Game Graphics

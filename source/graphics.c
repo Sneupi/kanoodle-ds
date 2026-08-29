@@ -11,21 +11,21 @@
 #include "difficulty.h"
 #include "board.h"
 
-Sprite flipSprite;
-Sprite rotateSprite;
-Sprite panelSprite;
-PolySprite selectionPolySprite;
-PolySprite noodlePolySpritesMain[12];
-PolySprite noodlePolySpritesSub[12];
-Sprite noodleOffSprites[12];
-Sprite noodleOnSprites[12];
+Sprite sub_sp_flip;
+Sprite sub_sp_rotate;
+Sprite sub_sp_panel;
+PolySprite sub_pl_highlight;
+PolySprite main_pl_noodle[12];
+PolySprite sub_pl_noodles[12];
+Sprite sub_sp_panel_off[12];
+Sprite sub_sp_panel_on[12];
 
-int logoBg;
-int controlHintsBg;
-int backgroundBgMain;
-int difficultyBg;
-int boardBg;
-int backgroundBgSub;
+int main_bg_logo;
+int main_bg_control_hints;
+int main_bg_background;
+int sub_bg_difficulty;
+int sub_bg_board;
+int sub_bg_background;
 
 bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
 
@@ -118,17 +118,17 @@ void init_graphics()
     int nextIdMain = 0;
     int nextIdSub = 0;
     for (int i = 0; i < 12; i++)
-        noodlePolySpritesMain[i] = init_poly_sprite(NOODLES[i], &oamMain, &nextIdMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
+        main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, &nextIdMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
-        noodlePolySpritesSub[i] = init_poly_sprite(NOODLES[i], &oamSub, &nextIdSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
-    selectionPolySprite = init_poly_sprite(NOODLE('B'), &oamSub, &nextIdSub, gfxSub[3], 0, 0, 0, 22, 22);
-    flipSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[0], 0, 224, 160, 32, 32);
-    rotateSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
-    panelSprite = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
+        sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, &nextIdSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
+    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, &nextIdSub, gfxSub[3], 0, 0, 0, 22, 22);
+    sub_sp_flip = init_sprite(&oamSub, &nextIdSub, gfxSub[0], 0, 224, 160, 32, 32);
+    sub_sp_rotate = init_sprite(&oamSub, &nextIdSub, gfxSub[1], 0, 224, 128, 32, 32);
+    sub_sp_panel = init_sprite(&oamSub, &nextIdSub, gfxSub[2], 0, 192, 160, 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOffSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        sub_sp_panel_off[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
     for (int i = 0; i < 12; i++)
-        noodleOnSprites[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
+        sub_sp_panel_on[i] = init_sprite(&oamSub, &nextIdSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
@@ -137,10 +137,10 @@ void init_graphics()
     {
         for (int j = 0; j < 12; j++)
         {
-            if (noodlePolySpritesMain[i].poly.id == sol[j].id)
+            if (main_pl_noodle[i].poly.id == sol[j].id)
             {
-                noodlePolySpritesMain[i].poly = sol[j];
-                place_poly_sprite(&noodlePolySpritesMain[i], 18, 16);
+                main_pl_noodle[i].poly = sol[j];
+                place_poly_sprite(&main_pl_noodle[i], 18, 16);
             }
         }
     }
@@ -167,28 +167,28 @@ void init_graphics()
     // ..This is possible since none of the used background tiles exceed more than 14KB,
     // so we can squeeze their map allocation into the space at the end of their tiles allocated chunk space
     // for all backgrounds in this game.
-    logoBg = bgInit(1, BgType_Text8bpp, BgSize_T_256x256, ((0 * 8) + 7), 0);
-    controlHintsBg = bgInit(2, BgType_Text8bpp, BgSize_T_256x256, ((1 * 8) + 7), 1);
-    backgroundBgMain = bgInit(3, BgType_Text8bpp, BgSize_T_256x256, ((2 * 8) + 7), 2);
-    difficultyBg = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x256, ((0 * 8) + 7), 0);
-    boardBg = bgInitSub(2, BgType_Text8bpp, BgSize_T_256x256, ((1 * 8) + 7), 1);
-    backgroundBgSub = bgInitSub(3, BgType_Text8bpp, BgSize_T_256x256, ((2 * 8) + 7), 2);
+    main_bg_logo = bgInit(1, BgType_Text8bpp, BgSize_T_256x256, ((0 * 8) + 7), 0);
+    main_bg_control_hints = bgInit(2, BgType_Text8bpp, BgSize_T_256x256, ((1 * 8) + 7), 1);
+    main_bg_background = bgInit(3, BgType_Text8bpp, BgSize_T_256x256, ((2 * 8) + 7), 2);
+    sub_bg_difficulty = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x256, ((0 * 8) + 7), 0);
+    sub_bg_board = bgInitSub(2, BgType_Text8bpp, BgSize_T_256x256, ((1 * 8) + 7), 1);
+    sub_bg_background = bgInitSub(3, BgType_Text8bpp, BgSize_T_256x256, ((2 * 8) + 7), 2);
 
     // copy graphics to vram
-    dmaCopy(logoTiles, bgGetGfxPtr(logoBg), logoTilesLen);
-    dmaCopy(controlHintsTiles, bgGetGfxPtr(controlHintsBg), controlHintsTilesLen);
-    dmaCopy(backgroundTiles, bgGetGfxPtr(backgroundBgMain), backgroundTilesLen);
-    dmaCopy(difficultyTiles, bgGetGfxPtr(difficultyBg), difficultyTilesLen);
-    dmaCopy(boardTiles, bgGetGfxPtr(boardBg), boardTilesLen);
-    dmaCopy(backgroundTiles, bgGetGfxPtr(backgroundBgSub), backgroundTilesLen);
+    dmaCopy(logoTiles, bgGetGfxPtr(main_bg_logo), logoTilesLen);
+    dmaCopy(controlHintsTiles, bgGetGfxPtr(main_bg_control_hints), controlHintsTilesLen);
+    dmaCopy(backgroundTiles, bgGetGfxPtr(main_bg_background), backgroundTilesLen);
+    dmaCopy(difficultyTiles, bgGetGfxPtr(sub_bg_difficulty), difficultyTilesLen);
+    dmaCopy(boardTiles, bgGetGfxPtr(sub_bg_board), boardTilesLen);
+    dmaCopy(backgroundTiles, bgGetGfxPtr(sub_bg_background), backgroundTilesLen);
 
     // copy maps to vram
-    dmaCopy(logoMap, bgGetMapPtr(logoBg), logoMapLen);
-    dmaCopy(controlHintsMap, bgGetMapPtr(controlHintsBg), controlHintsMapLen);
-    dmaCopy(backgroundMap, bgGetMapPtr(backgroundBgMain), backgroundMapLen);
-    dmaCopy(difficultyMap, bgGetMapPtr(difficultyBg), difficultyMapLen);
-    dmaCopy(boardMap, bgGetMapPtr(boardBg), boardMapLen);
-    dmaCopy(backgroundMap, bgGetMapPtr(backgroundBgSub), backgroundMapLen);
+    dmaCopy(logoMap, bgGetMapPtr(main_bg_logo), logoMapLen);
+    dmaCopy(controlHintsMap, bgGetMapPtr(main_bg_control_hints), controlHintsMapLen);
+    dmaCopy(backgroundMap, bgGetMapPtr(main_bg_background), backgroundMapLen);
+    dmaCopy(difficultyMap, bgGetMapPtr(sub_bg_difficulty), difficultyMapLen);
+    dmaCopy(boardMap, bgGetMapPtr(sub_bg_board), boardMapLen);
+    dmaCopy(backgroundMap, bgGetMapPtr(sub_bg_background), backgroundMapLen);
 
     // you can only access extended palettes in LCD mode
     vramSetBankE(VRAM_E_LCD); // for main engine
@@ -213,68 +213,68 @@ void init_graphics()
 void menu_screen()
 {
     // HIDE
-    hide_sprite(&flipSprite, true);
-    hide_sprite(&rotateSprite, true);
-    hide_sprite(&panelSprite, true);
-    hide_poly_sprite(&selectionPolySprite, true);
+    hide_sprite(&sub_sp_flip, true);
+    hide_sprite(&sub_sp_rotate, true);
+    hide_sprite(&sub_sp_panel, true);
+    hide_poly_sprite(&sub_pl_highlight, true);
     for (int i = 0; i < 12; i++)
     {
-        hide_poly_sprite(&noodlePolySpritesMain[i], true);
-        hide_poly_sprite(&noodlePolySpritesSub[i], true);
-        hide_sprite(&noodleOffSprites[i], true);
-        hide_sprite(&noodleOnSprites[i], true);
+        hide_poly_sprite(&main_pl_noodle[i], true);
+        hide_poly_sprite(&sub_pl_noodles[i], true);
+        hide_sprite(&sub_sp_panel_off[i], true);
+        hide_sprite(&sub_sp_panel_on[i], true);
     }
-    hide_bg(controlHintsBg, true);
-    hide_bg(boardBg, true);
+    hide_bg(main_bg_control_hints, true);
+    hide_bg(sub_bg_board, true);
 
     // SHOW
-    hide_bg(logoBg, false);
-    hide_bg(backgroundBgMain, false);
-    hide_bg(difficultyBg, false);
-    hide_bg(backgroundBgSub, false);
+    hide_bg(main_bg_logo, false);
+    hide_bg(main_bg_background, false);
+    hide_bg(sub_bg_difficulty, false);
+    hide_bg(sub_bg_background, false);
 }
 
 void game_screen()
 {
     // HIDE
-    hide_poly_sprite(&selectionPolySprite, true);
+    hide_poly_sprite(&sub_pl_highlight, true);
     for (int i = 0; i < 12; i++)
     {
-        hide_poly_sprite(&noodlePolySpritesSub[i], true);
-        hide_sprite(&noodleOffSprites[i], true);
-        hide_sprite(&noodleOnSprites[i], true);
+        hide_poly_sprite(&sub_pl_noodles[i], true);
+        hide_sprite(&sub_sp_panel_off[i], true);
+        hide_sprite(&sub_sp_panel_on[i], true);
     }
-    hide_bg(logoBg, true);
-    hide_bg(difficultyBg, true);
+    hide_bg(main_bg_logo, true);
+    hide_bg(sub_bg_difficulty, true);
 
     // SHOW
-    hide_sprite(&flipSprite, false);
-    hide_sprite(&rotateSprite, false);
-    hide_sprite(&panelSprite, false);
+    hide_sprite(&sub_sp_flip, false);
+    hide_sprite(&sub_sp_rotate, false);
+    hide_sprite(&sub_sp_panel, false);
     for (int i = 0; i < 12; i++)
     {
-        hide_poly_sprite(&noodlePolySpritesMain[i], false);
+        hide_poly_sprite(&main_pl_noodle[i], false);
     }
-    hide_bg(controlHintsBg, false);
-    hide_bg(backgroundBgMain, false);
-    hide_bg(boardBg, false);
-    hide_bg(backgroundBgSub, false);
+    hide_bg(main_bg_control_hints, false);
+    hide_bg(main_bg_background, false);
+    hide_bg(sub_bg_board, false);
+    hide_bg(sub_bg_background, false);
 }
 
 void hide_panel(bool hide)
 {
     for (int i = 0; i < 12; i++)
     {
-        Sprite *button = (panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i];
+        Sprite *button = (panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i];
         hide_sprite(button, hide);
     }
 }
 
 void press_panel_button(int i)
 {
-    hide_sprite((panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i], true);
+    hide_sprite((panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i], true);
     panelState[i] = !panelState[i];
-    hide_sprite((panelState[i]) ? &noodleOnSprites[i] : &noodleOffSprites[i], false);
+    hide_sprite((panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i], false);
 }
 
 /**
