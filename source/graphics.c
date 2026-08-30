@@ -13,15 +13,17 @@
 
 int spriteCountMain = 0;
 int spriteCountSub = 0;
+Sprite spritesMain[128];
+Sprite spritesSub[128];
 
-Sprite sub_sp_flip;
-Sprite sub_sp_rotate;
-Sprite sub_sp_panel;
+Sprite *sub_sp_flip;
+Sprite *sub_sp_rotate;
+Sprite *sub_sp_panel;
 PolySprite sub_pl_highlight;
 PolySprite main_pl_noodle[12];
 PolySprite sub_pl_noodles[12];
-Sprite sub_sp_panel_off[12];
-Sprite sub_sp_panel_on[12];
+Sprite *sub_sp_panel_off[12];
+Sprite *sub_sp_panel_on[12];
 
 int main_bg_logo;
 int main_bg_control_hints;
@@ -30,12 +32,12 @@ int sub_bg_difficulty;
 int sub_bg_board;
 int sub_bg_background;
 
+bool panelHide = 0;        // 0 (show), 1 (hide)
 bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
 
 void cb_set_draggable(Sprite *s) {}      // FIXME impl (highlighted & drag)
 void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
 void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
-void cb_toggle_panel(Sprite *s) {}       // FIXME impl
 void cb_noodle_on(Sprite *s) {}          // FIMXE impl
 void cb_noodle_off(Sprite *s) {}         // FIMXE impl
 
@@ -43,10 +45,11 @@ void cb_noodle_off(Sprite *s) {}         // FIMXE impl
  * Helpers
  */
 
-Sprite init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, int h, void (*callback)(Sprite *))
+Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, int h, void (*callback)(Sprite *))
 {
     // Assign unique non-overlapping IDs via global counter
     int id = (oam == &oamMain) ? spriteCountMain++ : spriteCountSub++;
+
     // NOTE: sprite sizes standardized, thus hardcode SpriteSize & SpriteColorFormat
     oamSet(
         oam,                        // Main or Sub OAM
@@ -63,7 +66,8 @@ Sprite init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, i
         false, false,               // VFlip, HFlip
         false                       // Mosaic
     );
-    return (Sprite){
+
+    Sprite sp = (Sprite){
         .x = x,
         .y = y,
         .w = w,
@@ -72,6 +76,17 @@ Sprite init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, i
         .oamId = id,
         .callback = callback,
     };
+
+    if (oam == &oamMain)
+    {
+        spritesMain[id] = sp;
+        return &spritesMain[id];
+    }
+    else
+    {
+        spritesSub[id] = sp;
+        return &spritesSub[id];
+    }
 }
 
 PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, int x, int y, int cell_w_px, int cell_h_px)
@@ -93,7 +108,6 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, 
 /**
  * Game Graphics
  */
-
 void init_graphics()
 {
 
@@ -232,16 +246,16 @@ void init_graphics()
 void menu_screen()
 {
     // HIDE
-    hide_sprite(&sub_sp_flip, true);
-    hide_sprite(&sub_sp_rotate, true);
-    hide_sprite(&sub_sp_panel, true);
+    hide_sprite(sub_sp_flip, true);
+    hide_sprite(sub_sp_rotate, true);
+    hide_sprite(sub_sp_panel, true);
     hide_poly_sprite(&sub_pl_highlight, true);
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&main_pl_noodle[i], true);
         hide_poly_sprite(&sub_pl_noodles[i], true);
-        hide_sprite(&sub_sp_panel_off[i], true);
-        hide_sprite(&sub_sp_panel_on[i], true);
+        hide_sprite(sub_sp_panel_off[i], true);
+        hide_sprite(sub_sp_panel_on[i], true);
     }
     hide_bg(main_bg_control_hints, true);
     hide_bg(sub_bg_board, true);
@@ -260,16 +274,16 @@ void game_screen()
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&sub_pl_noodles[i], true);
-        hide_sprite(&sub_sp_panel_off[i], true);
-        hide_sprite(&sub_sp_panel_on[i], true);
+        hide_sprite(sub_sp_panel_off[i], true);
+        hide_sprite(sub_sp_panel_on[i], true);
     }
     hide_bg(main_bg_logo, true);
     hide_bg(sub_bg_difficulty, true);
 
     // SHOW
-    hide_sprite(&sub_sp_flip, false);
-    hide_sprite(&sub_sp_rotate, false);
-    hide_sprite(&sub_sp_panel, false);
+    hide_sprite(sub_sp_flip, false);
+    hide_sprite(sub_sp_rotate, false);
+    hide_sprite(sub_sp_panel, false);
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&main_pl_noodle[i], false);
@@ -280,20 +294,58 @@ void game_screen()
     hide_bg(sub_bg_background, false);
 }
 
-void hide_panel(bool hide)
+void cb_toggle_panel(Sprite * /*unused*/)
 {
+    panelHide = !panelHide;
     for (int i = 0; i < 12; i++)
     {
-        Sprite *button = (panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i];
-        hide_sprite(button, hide);
+        Sprite *button = (panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i];
+        hide_sprite(button, panelHide);
     }
 }
 
 void press_panel_button(int i)
 {
-    hide_sprite((panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i], true);
+    hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], true);
     panelState[i] = !panelState[i];
-    hide_sprite((panelState[i]) ? &sub_sp_panel_on[i] : &sub_sp_panel_off[i], false);
+    hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+}
+
+void handle_input()
+{
+    touchPosition touch;
+    scanKeys();
+    touchRead(&touch);        // read the touchscreen coordinates
+    int pressed = keysDown(); // buttons pressed this loop
+    int held = keysHeld();    // buttons currently held
+
+    // touchscreen press
+    if (pressed & KEY_TOUCH)
+    {
+        int x = touch.px;
+        int y = touch.py;
+
+        // iter sub sprites (touchscreen sprites)
+        for (int i = 0; i < spriteCountSub; i++)
+        {
+            Sprite *sp = &spritesSub[i];
+            int x0 = sp->x;
+            int y0 = sp->y;
+            int x1 = sp->x + sp->w;
+            int y1 = sp->y + sp->h;
+
+            if (x >= x0 &&
+                x <= x1 &&
+                y >= y0 &&
+                y <= y1)
+            {
+                if (sp->callback)
+                    sp->callback(sp);
+
+                break;
+            }
+        }
+    }
 }
 
 /**
@@ -322,7 +374,7 @@ void shift_sprite(Sprite *s, int dx, int dy)
 void hide_poly_sprite(PolySprite *s, bool hide)
 {
     for (int i = 0; i < s->size; i++)
-        hide_sprite(&s->sprites[i], hide);
+        hide_sprite(s->sprites[i], hide);
 }
 
 void place_poly_sprite(PolySprite *s, int x, int y)
@@ -331,7 +383,7 @@ void place_poly_sprite(PolySprite *s, int x, int y)
     s->y = y;
     for (int i = 0; i < s->size; i++)
     {
-        Sprite *spr = &s->sprites[i];
+        Sprite *spr = s->sprites[i];
         int xOffset = x + (spr->w * s->poly.cell[i].x);
         int yOffset = y + (spr->h * s->poly.cell[i].y);
         place_sprite(spr, xOffset, yOffset);

@@ -5,23 +5,23 @@
 // vram-initialized sprite instance
 typedef struct Sprite
 {
-    int x;                      // 0-256
-    int y;                      // 0-192
-    int w;                      // true pixel width
-    int h;                      // true pixel height
-    OamState *oam;              // &oamSub OR &oamMain
-    int oamId;                  // 0-127
+    int x;                             // 0-256
+    int y;                             // 0-192
+    int w;                             // true pixel width
+    int h;                             // true pixel height
+    OamState *oam;                     // &oamSub OR &oamMain
+    int oamId;                         // 0-127
     void (*callback)(struct Sprite *); // on-touch event
 } Sprite;
 
 // polyomino sprite instance
 typedef struct
 {
-    int x;                          // base x coord
-    int y;                          // base y coord
-    Polyomino poly;                 // polyomino rep
-    int size;                       // polyomino cell count
-    Sprite sprites[MAX_POLY_CELLS]; // polyomino cell sprites
+    int x;                           // base x coord
+    int y;                           // base y coord
+    Polyomino poly;                  // polyomino rep
+    int size;                        // polyomino cell count
+    Sprite *sprites[MAX_POLY_CELLS]; // polyomino cell sprites
 } PolySprite;
 
 /**
@@ -34,9 +34,11 @@ void menu_screen();
 
 void game_screen();
 
-void hide_panel(bool hide);
+void cb_toggle_panel(Sprite * /*unused*/);
 
 void press_panel_button(int i);
+
+void handle_input();
 
 /**
  * Sprites
