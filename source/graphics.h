@@ -22,8 +22,8 @@ typedef struct
     int x;                           // base x coord
     int y;                           // base y coord
     Polyomino poly;                  // polyomino rep
-    int size;                        // polyomino cell count
     Sprite *sprites[MAX_POLY_CELLS]; // polyomino cell sprites
+    bool highlight;                  // 1 (draggable/rotate/flip), 0 (idle)
 } PolySprite;
 
 /**

@@ -34,14 +34,30 @@ int sub_bg_board;
 int sub_bg_background;
 
 // graphics state
-bool panelHide = 0;        // 0 (show), 1 (hide)
-bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
+bool panelHide = 0;                   // 0 (show), 1 (hide)
+bool panelState[12] = {0};            // 0 (noodle off), 1(noodle on)
+PolySprite *state_highlighted = NULL; // currently worked piece
 
 /**
  * Callbacks
  */
 
-void cb_set_draggable(Sprite *s) {}      // FIXME impl (highlighted & drag)
+void cb_set_draggable(Sprite *s)
+{
+    // unselect prev piece
+    if (state_highlighted)
+        state_highlighted->highlight = false;
+
+    // point to new piece
+    state_highlighted = &sub_pl_noodles[s->polyId - 'A'];
+    state_highlighted->highlight = true;
+
+    // update polysprite to highlight new
+    for (int i = 0; i < MAX_POLY_CELLS; i++)
+        hide_sprite(sub_pl_highlight.sprites[i], (i >= state_highlighted->poly.size));
+    sub_pl_highlight.poly = state_highlighted->poly;
+    place_poly_sprite(&sub_pl_highlight, state_highlighted->x - 1, state_highlighted->y - 1);
+}
 void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
 void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
 
@@ -98,12 +114,14 @@ Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, 
 
 PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, int x, int y, int cell_w_px, int cell_h_px)
 {
-    PolySprite ps;
-    ps.poly = zero_bounded(p);
-    ps.size = p.size;
-    ps.x = x;
-    ps.y = y;
-    for (int i = 0; i < ps.size; i++)
+    PolySprite ps = {
+        .x = x,
+        .y = y,
+        .poly = zero_bounded(p),
+        .highlight = 0,
+    };
+
+    for (int i = 0; i < ps.poly.size; i++)
     {
         int xOffset = x + (cell_w_px * ps.poly.cell[i].x);
         int yOffset = y + (cell_h_px * ps.poly.cell[i].y);
@@ -157,7 +175,6 @@ void init_graphics()
     }
 
     // 4.2. Set OAM entry attributes w proper
-    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, gfxSub[3], 0, 0, 0, 22, 22);
     sub_sp_flip = init_sprite(&oamSub, gfxSub[0], 0, 224, 160, 32, 32, cb_flip_highlighted, -1);
     sub_sp_rotate = init_sprite(&oamSub, gfxSub[1], 0, 224, 128, 32, 32, cb_rotate_highlighted, -1);
     sub_sp_panel = init_sprite(&oamSub, gfxSub[2], 0, 192, 160, 32, 32, cb_toggle_panel, -1);
@@ -169,6 +186,7 @@ void init_graphics()
         main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
         sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
+    sub_pl_highlight = init_poly_sprite((Polyomino){.id = '?', .size = MAX_POLY_CELLS, .cell = {0}}, &oamSub, gfxSub[3], 0, 0, 0, 20, 20);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
@@ -325,6 +343,13 @@ void cb_toggle_noodle(Sprite *s)
     panelState[i] = !panelState[i];
     hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
     hide_poly_sprite(&sub_pl_noodles[i], !panelState[i]);
+
+    // if noodle is highlighted and being hidden, unhighlight
+    if ((state_highlighted == &sub_pl_noodles[i]) && !panelState[i])
+    {
+        hide_poly_sprite(&sub_pl_highlight, true);
+        state_highlighted = NULL;
+    }
 }
 
 void handle_input()
@@ -391,7 +416,7 @@ void shift_sprite(Sprite *s, int dx, int dy)
 
 void hide_poly_sprite(PolySprite *s, bool hide)
 {
-    for (int i = 0; i < s->size; i++)
+    for (int i = 0; i < s->poly.size; i++)
         hide_sprite(s->sprites[i], hide);
 }
 
@@ -399,7 +424,7 @@ void place_poly_sprite(PolySprite *s, int x, int y)
 {
     s->x = x;
     s->y = y;
-    for (int i = 0; i < s->size; i++)
+    for (int i = 0; i < s->poly.size; i++)
     {
         Sprite *spr = s->sprites[i];
         int xOffset = x + (spr->w * s->poly.cell[i].x);
