@@ -350,8 +350,26 @@ void cb_highlight_draggable(Sprite *s)
     sub_pl_highlight.poly = state_highlighted->poly;
     place_poly_sprite(&sub_pl_highlight, state_highlighted->x - 1, state_highlighted->y - 1);
 }
-void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
-void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
+
+void cb_flip_highlighted(Sprite * /*unused*/)
+{
+    if (!state_highlighted)
+        return;
+    state_highlighted->poly = flipped(state_highlighted->poly);
+    place_poly_sprite(state_highlighted, state_highlighted->x, state_highlighted->y);
+    sub_pl_highlight.poly = flipped(sub_pl_highlight.poly);
+    place_poly_sprite(&sub_pl_highlight, sub_pl_highlight.x, sub_pl_highlight.y);
+}
+
+void cb_rotate_highlighted(Sprite * /*unused*/)
+{
+    if (!state_highlighted)
+        return;
+    state_highlighted->poly = rotated(state_highlighted->poly);
+    place_poly_sprite(state_highlighted, state_highlighted->x, state_highlighted->y);
+    sub_pl_highlight.poly = rotated(sub_pl_highlight.poly);
+    place_poly_sprite(&sub_pl_highlight, sub_pl_highlight.x, sub_pl_highlight.y);
+}
 
 void handle_touch_press(touchPosition touch)
 {
