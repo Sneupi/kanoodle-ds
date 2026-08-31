@@ -40,6 +40,14 @@ PolySprite *state_highlighted = NULL; // currently worked piece (rotatable/flipp
 bool state_dragging = 0;              // 1 (highlighted dragged), 0 (highlighted idle)
 int state_dragged_x_off = 0;          // x offset (if dragging)
 int state_dragged_y_off = 0;          // y offset (if dragging)
+int state_screen = 0;                 // 0 (menu), 1 (game)
+
+// forward declarations
+void cb_toggle_panel(Sprite * /*unused*/);
+void cb_toggle_noodle(Sprite *s);
+void cb_highlight_draggable(Sprite *s);
+void cb_flip_highlighted(Sprite * /*unused*/);
+void cb_rotate_highlighted(Sprite * /*unused*/);
 
 /**
  * Helpers
@@ -245,10 +253,15 @@ void init_graphics()
     // http://mtheall.com/banks.html#A=MBG0&C=MBG2&E=BGEPAL&H=SBGEPAL
     vramSetBankE(VRAM_E_BG_EXT_PALETTE);     // for main engine
     vramSetBankH(VRAM_H_SUB_BG_EXT_PALETTE); // for sub engine
+
+    // 6. Set entry screen (menu)
+    menu_screen();
 }
 
 void menu_screen()
 {
+    state_screen = 0; // menu
+
     // HIDE
     hide_sprite(sub_sp_flip, true);
     hide_sprite(sub_sp_rotate, true);
@@ -273,11 +286,17 @@ void menu_screen()
 
 void game_screen()
 {
+    state_screen = 1; // game
+    state_highlighted = NULL;
+    state_dragging = 0;
+
     // HIDE
     hide_poly_sprite(&sub_pl_highlight, true);
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&sub_pl_noodles[i], true);
+        place_poly_sprite(&sub_pl_noodles[i], 100, 100);
+        state_panel[i] = 0;
     }
     state_panel_hide = 0;
     cb_toggle_panel(NULL); // hides on toggle
@@ -447,13 +466,74 @@ void handle_input()
     int pressed = keysDown(); // buttons pressed this loop
     int held = keysHeld();    // buttons currently held
 
-    if (pressed & KEY_TOUCH)
-        handle_touch_press(touch);
-    else if (held & KEY_TOUCH)
-        handle_touch_hold(touch);
-    if (!(held & KEY_TOUCH))
-        state_dragging = false; // impossible to drag if not held
+    // MENU
+    if (state_screen == 0)
+    {
+        if (pressed & KEY_TOUCH)
+        {
+            int x = touch.px;
+            int y = touch.py;
+
+            // LEVEL 1
+            if (x >= 8 && x <= 8 + 116 && y >= 40 && y <= 40 + 40)
+            {
+                game_screen();
+                generate_puzzle(1);
+            }
+            // LEVEL 2
+            else if (x >= 132 && x <= 132 + 116 && y >= 40 && y <= 40 + 40)
+            {
+                game_screen();
+                generate_puzzle(2);
+            }
+            // LEVEL 3
+            else if (x >= 8 && x <= 8 + 116 && y >= 88 && y <= 88 + 40)
+            {
+                game_screen();
+                generate_puzzle(3);
+            }
+            // LEVEL 4
+            else if (x >= 132 && x <= 132 + 116 && y >= 88 && y <= 88 + 40)
+            {
+                game_screen();
+                generate_puzzle(4);
+            }
+            // LEVEL 5
+            else if (x >= 8 && x <= 8 + 116 && y >= 136 && y <= 136 + 40)
+            {
+                game_screen();
+                generate_puzzle(5);
+            }
+            // LEVEL 6
+            else if (x >= 132 && x <= 132 + 116 && y >= 136 && y <= 136 + 40)
+            {
+                game_screen();
+                generate_puzzle(6);
+            }
+        }
+    }
+
+    // GAME
+    else if (state_screen == 1)
+    {
+        if (pressed & KEY_X)
+            solve_puzzle();
+        if (pressed & KEY_B)
+            reset_puzzle();
+        if (pressed & KEY_Y)
+            menu_screen();
+        if (pressed & KEY_TOUCH)
+            handle_touch_press(touch);
+        else if (held & KEY_TOUCH)
+            handle_touch_hold(touch);
+        if (!(held & KEY_TOUCH))
+            state_dragging = false; // impossible to drag if not held
+    }
 }
+
+void solve_puzzle() {}                  // FIXME impl
+void reset_puzzle() {}                  // FIXME impl
+void generate_puzzle(int difficulty) {} // FIXME impl
 
 /**
  * Sprites

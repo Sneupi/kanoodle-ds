@@ -6,9 +6,7 @@ int main(void)
 {
     init_graphics();
 
-    game_screen();
-
-    // 5. Main Game Loop
+    // Main Game Loop
     while (1)
     {
         swiWaitForVBlank();

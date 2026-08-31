@@ -35,17 +35,13 @@ void menu_screen();
 
 void game_screen();
 
-void cb_toggle_panel(Sprite * /*unused*/);
-
-void cb_toggle_noodle(Sprite *s);
-
-void cb_highlight_draggable(Sprite *s);
-
-void cb_flip_highlighted(Sprite * /*unused*/);
-
-void cb_rotate_highlighted(Sprite * /*unused*/);
-
 void handle_input();
+
+void generate_puzzle(int difficulty);
+
+void solve_puzzle();
+
+void reset_puzzle();
 
 /**
  * Sprites
