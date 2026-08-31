@@ -11,11 +11,13 @@
 #include "difficulty.h"
 #include "board.h"
 
+// oam representation
 int spriteCountMain = 0;
 int spriteCountSub = 0;
 Sprite spritesMain[128];
 Sprite spritesSub[128];
 
+// initialized assets
 Sprite *sub_sp_flip;
 Sprite *sub_sp_rotate;
 Sprite *sub_sp_panel;
@@ -24,7 +26,6 @@ PolySprite main_pl_noodle[12];
 PolySprite sub_pl_noodles[12];
 Sprite *sub_sp_panel_off[12];
 Sprite *sub_sp_panel_on[12];
-
 int main_bg_logo;
 int main_bg_control_hints;
 int main_bg_background;
@@ -32,23 +33,27 @@ int sub_bg_difficulty;
 int sub_bg_board;
 int sub_bg_background;
 
+// graphics state
 bool panelHide = 0;        // 0 (show), 1 (hide)
 bool panelState[12] = {0}; // 0 (noodle off), 1(noodle on)
+
+/**
+ * Callbacks
+ */
 
 void cb_set_draggable(Sprite *s) {}      // FIXME impl (highlighted & drag)
 void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
 void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
-void cb_noodle_on(Sprite *s) {}          // FIMXE impl
-void cb_noodle_off(Sprite *s) {}         // FIMXE impl
 
 /**
  * Helpers
  */
 
-Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, int h, void (*callback)(Sprite *))
+Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, int h, void (*callback)(Sprite *), int polyId)
 {
     // Assign unique non-overlapping IDs via global counter
     int id = (oam == &oamMain) ? spriteCountMain++ : spriteCountSub++;
+    bool hide = false;
 
     // NOTE: sprite sizes standardized, thus hardcode SpriteSize & SpriteColorFormat
     oamSet(
@@ -62,7 +67,7 @@ Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, 
         gfx,                        // Graphics pointer in VRAM
         -1,                         // Affine index (-1 = no rotation/scaling)
         false,                      // Double size flag
-        false,                      // Hide sprite flag
+        hide,                       // Hide sprite flag
         false, false,               // VFlip, HFlip
         false                       // Mosaic
     );
@@ -74,7 +79,9 @@ Sprite *init_sprite(OamState *oam, u16 *gfx, int priority, int x, int y, int w, 
         .h = h,
         .oam = oam,
         .oamId = id,
+        .polyId = polyId,
         .callback = callback,
+        .hidden = hide,
     };
 
     if (oam == &oamMain)
@@ -100,7 +107,7 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, 
     {
         int xOffset = x + (cell_w_px * ps.poly.cell[i].x);
         int yOffset = y + (cell_h_px * ps.poly.cell[i].y);
-        ps.sprites[i] = init_sprite(oam, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px, cb_set_draggable);
+        ps.sprites[i] = init_sprite(oam, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px, cb_set_draggable, (int)ps.poly.id);
     }
     return ps;
 }
@@ -150,18 +157,18 @@ void init_graphics()
     }
 
     // 4.2. Set OAM entry attributes w proper
+    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, gfxSub[3], 0, 0, 0, 22, 22);
+    sub_sp_flip = init_sprite(&oamSub, gfxSub[0], 0, 224, 160, 32, 32, cb_flip_highlighted, -1);
+    sub_sp_rotate = init_sprite(&oamSub, gfxSub[1], 0, 224, 128, 32, 32, cb_rotate_highlighted, -1);
+    sub_sp_panel = init_sprite(&oamSub, gfxSub[2], 0, 192, 160, 32, 32, cb_toggle_panel, -1);
+    for (int i = 0; i < 12; i++)
+        sub_sp_panel_off[i] = init_sprite(&oamSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_toggle_noodle, (int)NOODLES[i].id);
+    for (int i = 0; i < 12; i++)
+        sub_sp_panel_on[i] = init_sprite(&oamSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_toggle_noodle, (int)NOODLES[i].id);
     for (int i = 0; i < 12; i++)
         main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
         sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
-    sub_pl_highlight = init_poly_sprite(NOODLE('B'), &oamSub, gfxSub[3], 0, 0, 0, 22, 22);
-    sub_sp_flip = init_sprite(&oamSub, gfxSub[0], 0, 224, 160, 32, 32, cb_flip_highlighted);
-    sub_sp_rotate = init_sprite(&oamSub, gfxSub[1], 0, 224, 128, 32, 32, cb_rotate_highlighted);
-    sub_sp_panel = init_sprite(&oamSub, gfxSub[2], 0, 192, 160, 32, 32, cb_toggle_panel);
-    for (int i = 0; i < 12; i++)
-        sub_sp_panel_off[i] = init_sprite(&oamSub, gfxSub[16 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_noodle_off);
-    for (int i = 0; i < 12; i++)
-        sub_sp_panel_on[i] = init_sprite(&oamSub, gfxSub[28 + i], 0, ((i % 6) * 32), (((i / 6) * 32) + 128), 32, 32, cb_noodle_on);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
@@ -254,9 +261,9 @@ void menu_screen()
     {
         hide_poly_sprite(&main_pl_noodle[i], true);
         hide_poly_sprite(&sub_pl_noodles[i], true);
-        hide_sprite(sub_sp_panel_off[i], true);
-        hide_sprite(sub_sp_panel_on[i], true);
     }
+    panelHide = 0;
+    cb_toggle_panel(NULL); // hides on toggle
     hide_bg(main_bg_control_hints, true);
     hide_bg(sub_bg_board, true);
 
@@ -274,9 +281,9 @@ void game_screen()
     for (int i = 0; i < 12; i++)
     {
         hide_poly_sprite(&sub_pl_noodles[i], true);
-        hide_sprite(sub_sp_panel_off[i], true);
-        hide_sprite(sub_sp_panel_on[i], true);
     }
+    panelHide = 0;
+    cb_toggle_panel(NULL); // hides on toggle
     hide_bg(main_bg_logo, true);
     hide_bg(sub_bg_difficulty, true);
 
@@ -299,16 +306,25 @@ void cb_toggle_panel(Sprite * /*unused*/)
     panelHide = !panelHide;
     for (int i = 0; i < 12; i++)
     {
-        Sprite *button = (panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i];
-        hide_sprite(button, panelHide);
+        if (panelHide)
+        {
+            hide_sprite(sub_sp_panel_on[i], true);
+            hide_sprite(sub_sp_panel_off[i], true);
+        }
+        else
+        {
+            hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+        }
     }
 }
 
-void press_panel_button(int i)
+void cb_toggle_noodle(Sprite *s)
 {
+    int i = s->polyId - 'A';
     hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], true);
     panelState[i] = !panelState[i];
     hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+    hide_poly_sprite(&sub_pl_noodles[i], !panelState[i]);
 }
 
 void handle_input()
@@ -337,7 +353,8 @@ void handle_input()
             if (x >= x0 &&
                 x <= x1 &&
                 y >= y0 &&
-                y <= y1)
+                y <= y1 &&
+                !sp->hidden)
             {
                 if (sp->callback)
                     sp->callback(sp);
@@ -354,6 +371,7 @@ void handle_input()
 
 void hide_sprite(Sprite *s, bool hide)
 {
+    s->hidden = hide;
     oamSetHidden(s->oam, s->oamId, hide);
 }
 

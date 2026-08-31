@@ -11,7 +11,9 @@ typedef struct Sprite
     int h;                             // true pixel height
     OamState *oam;                     // &oamSub OR &oamMain
     int oamId;                         // 0-127
+    int polyId;                        // on-touch cb param (-1 if N/A)
     void (*callback)(struct Sprite *); // on-touch event
+    bool hidden;                       // 0 (show), 1 (hide)
 } Sprite;
 
 // polyomino sprite instance
@@ -36,7 +38,13 @@ void game_screen();
 
 void cb_toggle_panel(Sprite * /*unused*/);
 
-void press_panel_button(int i);
+void cb_toggle_noodle(Sprite *s);
+
+void cb_set_draggable(Sprite *s);
+
+void cb_flip_highlighted(Sprite *s);
+
+void cb_rotate_highlighted(Sprite *s);
 
 void handle_input();
 
