@@ -40,7 +40,7 @@ void cb_toggle_panel(Sprite * /*unused*/);
 
 void cb_toggle_noodle(Sprite *s);
 
-void cb_set_draggable(Sprite *s);
+void cb_highlight_draggable(Sprite *s);
 
 void cb_flip_highlighted(Sprite *s);
 

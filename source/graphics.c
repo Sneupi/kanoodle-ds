@@ -34,32 +34,9 @@ int sub_bg_board;
 int sub_bg_background;
 
 // graphics state
-bool panelHide = 0;                   // 0 (show), 1 (hide)
-bool panelState[12] = {0};            // 0 (noodle off), 1(noodle on)
+bool state_panel_hide = 0;            // 0 (show), 1 (hide)
+bool state_panel[12] = {0};           // 0 (noodle off), 1(noodle on)
 PolySprite *state_highlighted = NULL; // currently worked piece
-
-/**
- * Callbacks
- */
-
-void cb_set_draggable(Sprite *s)
-{
-    // unselect prev piece
-    if (state_highlighted)
-        state_highlighted->highlight = false;
-
-    // point to new piece
-    state_highlighted = &sub_pl_noodles[s->polyId - 'A'];
-    state_highlighted->highlight = true;
-
-    // update polysprite to highlight new
-    for (int i = 0; i < MAX_POLY_CELLS; i++)
-        hide_sprite(sub_pl_highlight.sprites[i], (i >= state_highlighted->poly.size));
-    sub_pl_highlight.poly = state_highlighted->poly;
-    place_poly_sprite(&sub_pl_highlight, state_highlighted->x - 1, state_highlighted->y - 1);
-}
-void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
-void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
 
 /**
  * Helpers
@@ -125,7 +102,7 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, 
     {
         int xOffset = x + (cell_w_px * ps.poly.cell[i].x);
         int yOffset = y + (cell_h_px * ps.poly.cell[i].y);
-        ps.sprites[i] = init_sprite(oam, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px, cb_set_draggable, (int)ps.poly.id);
+        ps.sprites[i] = init_sprite(oam, gfx, priority, xOffset, yOffset, cell_w_px, cell_h_px, cb_highlight_draggable, (int)ps.poly.id);
     }
     return ps;
 }
@@ -280,7 +257,7 @@ void menu_screen()
         hide_poly_sprite(&main_pl_noodle[i], true);
         hide_poly_sprite(&sub_pl_noodles[i], true);
     }
-    panelHide = 0;
+    state_panel_hide = 0;
     cb_toggle_panel(NULL); // hides on toggle
     hide_bg(main_bg_control_hints, true);
     hide_bg(sub_bg_board, true);
@@ -300,7 +277,7 @@ void game_screen()
     {
         hide_poly_sprite(&sub_pl_noodles[i], true);
     }
-    panelHide = 0;
+    state_panel_hide = 0;
     cb_toggle_panel(NULL); // hides on toggle
     hide_bg(main_bg_logo, true);
     hide_bg(sub_bg_difficulty, true);
@@ -319,19 +296,23 @@ void game_screen()
     hide_bg(sub_bg_background, false);
 }
 
+/**
+ * Callbacks
+ */
+
 void cb_toggle_panel(Sprite * /*unused*/)
 {
-    panelHide = !panelHide;
+    state_panel_hide = !state_panel_hide;
     for (int i = 0; i < 12; i++)
     {
-        if (panelHide)
+        if (state_panel_hide)
         {
             hide_sprite(sub_sp_panel_on[i], true);
             hide_sprite(sub_sp_panel_off[i], true);
         }
         else
         {
-            hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+            hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
         }
     }
 }
@@ -339,18 +320,37 @@ void cb_toggle_panel(Sprite * /*unused*/)
 void cb_toggle_noodle(Sprite *s)
 {
     int i = s->polyId - 'A';
-    hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], true);
-    panelState[i] = !panelState[i];
-    hide_sprite((panelState[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
-    hide_poly_sprite(&sub_pl_noodles[i], !panelState[i]);
+    hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], true);
+    state_panel[i] = !state_panel[i];
+    hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+    hide_poly_sprite(&sub_pl_noodles[i], !state_panel[i]);
 
     // if noodle is highlighted and being hidden, unhighlight
-    if ((state_highlighted == &sub_pl_noodles[i]) && !panelState[i])
+    if ((state_highlighted == &sub_pl_noodles[i]) && !state_panel[i])
     {
         hide_poly_sprite(&sub_pl_highlight, true);
         state_highlighted = NULL;
     }
 }
+
+void cb_highlight_draggable(Sprite *s)
+{
+    // unselect prev piece
+    if (state_highlighted)
+        state_highlighted->highlight = false;
+
+    // point to new piece
+    state_highlighted = &sub_pl_noodles[s->polyId - 'A'];
+    state_highlighted->highlight = true;
+
+    // update polysprite to highlight new
+    for (int i = 0; i < MAX_POLY_CELLS; i++)
+        hide_sprite(sub_pl_highlight.sprites[i], (i >= state_highlighted->poly.size));
+    sub_pl_highlight.poly = state_highlighted->poly;
+    place_poly_sprite(&sub_pl_highlight, state_highlighted->x - 1, state_highlighted->y - 1);
+}
+void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
+void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
 
 void handle_input()
 {
