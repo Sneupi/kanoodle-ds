@@ -36,7 +36,10 @@ int sub_bg_background;
 // graphics state
 bool state_panel_hide = 0;            // 0 (show), 1 (hide)
 bool state_panel[12] = {0};           // 0 (noodle off), 1(noodle on)
-PolySprite *state_highlighted = NULL; // currently worked piece
+PolySprite *state_highlighted = NULL; // currently worked piece (rotatable/flippable)
+bool state_dragging = 0;              // 1 (highlighted dragged), 0 (highlighted idle)
+int state_dragged_x_off = 0;          // x offset (if dragging)
+int state_dragged_y_off = 0;          // y offset (if dragging)
 
 /**
  * Helpers
@@ -95,7 +98,6 @@ PolySprite init_poly_sprite(Polyomino p, OamState *oam, u16 *gfx, int priority, 
         .x = x,
         .y = y,
         .poly = zero_bounded(p),
-        .highlight = 0,
     };
 
     for (int i = 0; i < ps.poly.size; i++)
@@ -163,7 +165,7 @@ void init_graphics()
         main_pl_noodle[i] = init_poly_sprite(NOODLES[i], &oamMain, gfxMain[4 + i], 0, 100, 100, 20, 20);
     for (int i = 0; i < 12; i++)
         sub_pl_noodles[i] = init_poly_sprite(NOODLES[i], &oamSub, gfxSub[4 + i], 0, 100, 100, 20, 20);
-    sub_pl_highlight = init_poly_sprite((Polyomino){.id = '?', .size = MAX_POLY_CELLS, .cell = {0}}, &oamSub, gfxSub[3], 0, 0, 0, 20, 20);
+    sub_pl_highlight = init_poly_sprite((Polyomino){.id = '?', .size = MAX_POLY_CELLS, .cell = {{0}}}, &oamSub, gfxSub[3], 0, 0, 0, 20, 20);
 
     // 4.3. Generate initial placement layout once
     Polyomino sol[12];
@@ -319,11 +321,15 @@ void cb_toggle_panel(Sprite * /*unused*/)
 
 void cb_toggle_noodle(Sprite *s)
 {
+    // get panel index based on sprites associated noodle id
     int i = s->polyId - 'A';
+
+    // update state (toggle) & swap sprites
     hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], true);
     state_panel[i] = !state_panel[i];
     hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
     hide_poly_sprite(&sub_pl_noodles[i], !state_panel[i]);
+    hide_poly_sprite(&main_pl_noodle[i], state_panel[i]);
 
     // if noodle is highlighted and being hidden, unhighlight
     if ((state_highlighted == &sub_pl_noodles[i]) && !state_panel[i])
@@ -335,13 +341,8 @@ void cb_toggle_noodle(Sprite *s)
 
 void cb_highlight_draggable(Sprite *s)
 {
-    // unselect prev piece
-    if (state_highlighted)
-        state_highlighted->highlight = false;
-
     // point to new piece
     state_highlighted = &sub_pl_noodles[s->polyId - 'A'];
-    state_highlighted->highlight = true;
 
     // update polysprite to highlight new
     for (int i = 0; i < MAX_POLY_CELLS; i++)
@@ -352,6 +353,74 @@ void cb_highlight_draggable(Sprite *s)
 void cb_flip_highlighted(Sprite *s) {}   // FIXME impl
 void cb_rotate_highlighted(Sprite *s) {} // FIXME impl
 
+void handle_touch_press(touchPosition touch)
+{
+    int x = touch.px;
+    int y = touch.py;
+
+    // iter sub sprites (touchscreen sprites)
+    for (int i = 0; i < spriteCountSub; i++)
+    {
+        Sprite *sp = &spritesSub[i];
+        int x0 = sp->x;
+        int y0 = sp->y;
+        int x1 = sp->x + sp->w;
+        int y1 = sp->y + sp->h;
+
+        // if pressed a sprite, do topmost sprites callback
+        if (x >= x0 &&
+            x <= x1 &&
+            y >= y0 &&
+            y <= y1 &&
+            !sp->hidden)
+        {
+            if (sp->callback)
+                sp->callback(sp);
+
+            break;
+        }
+    }
+}
+
+void handle_touch_hold(touchPosition touch)
+{
+    int x = touch.px;
+    int y = touch.py;
+
+    if (state_highlighted)
+    {
+        // if !dragging and (x,y) on piece, set dragging, x offset, y offset
+        if (!state_dragging)
+        {
+            for (int i = 0; i < state_highlighted->poly.size; i++)
+            {
+                Sprite *sp = state_highlighted->sprites[i];
+                int x0 = sp->x;
+                int y0 = sp->y;
+                int x1 = sp->x + sp->w;
+                int y1 = sp->y + sp->h;
+                if (x >= x0 &&
+                    x <= x1 &&
+                    y >= y0 &&
+                    y <= y1 &&
+                    !sp->hidden)
+                {
+                    state_dragged_x_off = x - state_highlighted->x;
+                    state_dragged_y_off = y - state_highlighted->y;
+                    state_dragging = true;
+                    break;
+                }
+            }
+        }
+        // if dragging, update state_highlighted with new (x,y) coords
+        else
+        {
+            place_poly_sprite(state_highlighted, x - state_dragged_x_off, y - state_dragged_y_off);
+            place_poly_sprite(&sub_pl_highlight, state_highlighted->x - 1, state_highlighted->y - 1);
+        }
+    }
+}
+
 void handle_input()
 {
     touchPosition touch;
@@ -360,34 +429,12 @@ void handle_input()
     int pressed = keysDown(); // buttons pressed this loop
     int held = keysHeld();    // buttons currently held
 
-    // touchscreen press
     if (pressed & KEY_TOUCH)
-    {
-        int x = touch.px;
-        int y = touch.py;
-
-        // iter sub sprites (touchscreen sprites)
-        for (int i = 0; i < spriteCountSub; i++)
-        {
-            Sprite *sp = &spritesSub[i];
-            int x0 = sp->x;
-            int y0 = sp->y;
-            int x1 = sp->x + sp->w;
-            int y1 = sp->y + sp->h;
-
-            if (x >= x0 &&
-                x <= x1 &&
-                y >= y0 &&
-                y <= y1 &&
-                !sp->hidden)
-            {
-                if (sp->callback)
-                    sp->callback(sp);
-
-                break;
-            }
-        }
-    }
+        handle_touch_press(touch);
+    else if (held & KEY_TOUCH)
+        handle_touch_hold(touch);
+    if (!(held & KEY_TOUCH))
+        state_dragging = false; // impossible to drag if not held
 }
 
 /**
@@ -402,6 +449,8 @@ void hide_sprite(Sprite *s, bool hide)
 
 void place_sprite(Sprite *s, int x, int y)
 {
+    s->x = x;
+    s->y = y;
     oamSetXY(s->oam, s->oamId, x, y);
 }
 
