@@ -583,6 +583,9 @@ void reset_puzzle()
 
 void generate_puzzle(int difficulty)
 {
+    for (int i = 0; i < 12; i++)
+        state_noodle_lock[i] = 0;
+
     Polyomino *sol = state_solution;
     random_solution(sol, 900);
 
