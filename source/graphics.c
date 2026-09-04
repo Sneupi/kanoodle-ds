@@ -540,10 +540,9 @@ void handle_input()
 
 void solve_puzzle()
 {
+    state_highlighted = NULL;
     if (!state_panel_hide)
-    {
         cb_toggle_panel(NULL);
-    }
 
     Polyomino *sol = state_solution;
     for (int i = 0; i < 12; i++)
@@ -555,6 +554,7 @@ void solve_puzzle()
                 sub_pl_noodles[i].poly = sol[k];
                 place_poly_sprite(&sub_pl_noodles[i], 19, 5);
                 hide_poly_sprite(&sub_pl_noodles[i], false);
+                hide_poly_sprite(&sub_pl_highlight, true);
                 hide_poly_sprite(&main_pl_noodle[i], true);
                 state_noodle_lock[i] = 1;
             }
