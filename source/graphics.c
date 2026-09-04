@@ -562,7 +562,24 @@ void solve_puzzle()
     }
 }
 
-void reset_puzzle() {} // FIXME impl
+void reset_puzzle()
+{
+    if (!state_panel_hide)
+        cb_toggle_panel(NULL);
+
+    for (int i = 0; i < 12; i++)
+    {
+        // reset unlocked pieces
+        if (!state_noodle_lock[i])
+        {
+            place_poly_sprite(&sub_pl_noodles[i], 100, 100);
+            hide_poly_sprite(&sub_pl_noodles[i], true);
+            hide_poly_sprite(&sub_pl_highlight, true);
+            hide_poly_sprite(&main_pl_noodle[i], false);
+            state_panel[i] = 0;
+        }
+    }
+}
 
 void generate_puzzle(int difficulty)
 {
