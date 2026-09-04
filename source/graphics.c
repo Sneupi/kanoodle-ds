@@ -41,6 +41,8 @@ bool state_dragging = 0;              // 1 (highlighted dragged), 0 (highlighted
 int state_dragged_x_off = 0;          // x offset (if dragging)
 int state_dragged_y_off = 0;          // y offset (if dragging)
 int state_screen = 0;                 // 0 (menu), 1 (game)
+bool state_noodle_lock[12] = {0};     // 0 (draggable), 1 (puzzle start piece)
+Polyomino state_solution[12];         // puzzle solution
 
 // forward declarations
 void cb_toggle_panel(Sprite * /*unused*/);
@@ -333,7 +335,8 @@ void cb_toggle_panel(Sprite * /*unused*/)
         }
         else
         {
-            hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
+            if (!state_noodle_lock[i])
+                hide_sprite((state_panel[i]) ? sub_sp_panel_on[i] : sub_sp_panel_off[i], false);
         }
     }
 }
@@ -360,6 +363,10 @@ void cb_toggle_noodle(Sprite *s)
 
 void cb_highlight_draggable(Sprite *s)
 {
+    // if locked piece, dont setup highlight or draggability
+    if (state_noodle_lock[s->polyId - 'A'])
+        return;
+
     // point to new piece
     state_highlighted = &sub_pl_noodles[s->polyId - 'A'];
 
@@ -531,9 +538,65 @@ void handle_input()
     }
 }
 
-void solve_puzzle() {}                  // FIXME impl
-void reset_puzzle() {}                  // FIXME impl
-void generate_puzzle(int difficulty) {} // FIXME impl
+void solve_puzzle()
+{
+    if (!state_panel_hide)
+    {
+        cb_toggle_panel(NULL);
+    }
+
+    Polyomino *sol = state_solution;
+    for (int i = 0; i < 12; i++)
+    {
+        for (int k = 0; k < 12; k++)
+        {
+            if (sub_pl_noodles[i].poly.id == sol[k].id)
+            {
+                sub_pl_noodles[i].poly = sol[k];
+                place_poly_sprite(&sub_pl_noodles[i], 19, 5);
+                hide_poly_sprite(&sub_pl_noodles[i], false);
+                hide_poly_sprite(&main_pl_noodle[i], true);
+                state_noodle_lock[i] = 1;
+            }
+        }
+    }
+}
+
+void reset_puzzle() {} // FIXME impl
+
+void generate_puzzle(int difficulty)
+{
+    Polyomino *sol = state_solution;
+    random_solution(sol, 900);
+
+    // set starting puzzle state
+    for (int i = 11; i > 0; i--)
+    {
+        // do random swap
+        int j = rand() % (i + 1);
+        Polyomino temp = sol[i];
+        sol[i] = sol[j];
+        sol[j] = temp;
+
+        // set locked-down pieces
+        if (i > difficulty + 3)
+        {
+            for (int k = 0; k < 12; k++)
+            {
+                if (sub_pl_noodles[i].poly.id == sol[k].id)
+                {
+                    sub_pl_noodles[i].poly = sol[k];
+                    place_poly_sprite(&sub_pl_noodles[i], 19, 5);
+                    hide_poly_sprite(&sub_pl_noodles[i], false);
+                    hide_poly_sprite(&main_pl_noodle[i], true);
+                }
+            }
+        }
+
+        // set piece state
+        state_noodle_lock[i] = (i > difficulty + 3);
+    }
+}
 
 /**
  * Sprites
